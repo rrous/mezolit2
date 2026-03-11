@@ -1,0 +1,34 @@
+<GMLFeatureClassList>
+  <GMLFeatureClass>
+    <Name>sites_wgs84</Name>
+    <ElementPath>sites_wgs84</ElementPath>
+    <GeometryName>geometryProperty</GeometryName>
+    <GeometryElementPath>geometryProperty</GeometryElementPath>
+    <!--POLYGON-->
+    <GeometryType>3</GeometryType>
+    <DatasetSpecificInfo>
+      <FeatureCount>20</FeatureCount>
+      <ExtentXMin>-0.43686</ExtentXMin>
+      <ExtentXMax>-0.36643</ExtentXMax>
+      <ExtentYMin>54.20584</ExtentYMin>
+      <ExtentYMax>54.22418</ExtentYMax>
+    </DatasetSpecificInfo>
+    <PropertyDefn>
+      <Name>Id</Name>
+      <ElementPath>Id</ElementPath>
+      <Type>Integer</Type>
+    </PropertyDefn>
+    <PropertyDefn>
+      <Name>SiteName</Name>
+      <ElementPath>SiteName</ElementPath>
+      <Type>String</Type>
+      <Width>25</Width>
+    </PropertyDefn>
+    <PropertyDefn>
+      <Name>link</Name>
+      <ElementPath>link</ElementPath>
+      <Type>String</Type>
+      <Width>17</Width>
+    </PropertyDefn>
+  </GMLFeatureClass>
+</GMLFeatureClassList>

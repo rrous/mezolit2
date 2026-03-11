@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yorkshire ~6200 BCE — Mesolithic Landscape</title>
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- Top bar: title + controls -->
+    <header id="topbar">
+      <div id="title-block">
+        <span id="title-main">Yorkshire <em>~6200 BCE</em></span>
+        <span id="title-sub">Mesolithic Landscape Reconstruction <span class="poc-badge">PoC</span></span>
+      </div>
+
+      <nav id="controls">
+        <!-- Season filter -->
+        <div class="control-group" id="season-group">
+          <span class="control-label">Season</span>
+          <div id="season-btns">
+            <button class="season-btn active" data-season="">All</button>
+            <button class="season-btn" data-season="spring">Spring</button>
+            <button class="season-btn" data-season="summer">Summer</button>
+            <button class="season-btn" data-season="autumn">Autumn</button>
+            <button class="season-btn" data-season="winter">Winter</button>
+          </div>
+        </div>
+
+        <!-- View mode (replaces individual layer checkboxes) -->
+        <div class="control-group" id="view-mode-group">
+          <span class="control-label">View</span>
+          <div id="view-mode-btns">
+            <button class="view-btn active" data-view="all"      title="All layers">All</button>
+            <button class="view-btn"        data-view="biotopes"  title="Biotopes + ecotones">Biotopes</button>
+            <button class="view-btn"        data-view="terrain"   title="Terrain + rivers">Terrain</button>
+            <button class="view-btn"        data-view="sites"     title="Archaeological sites only">Sites only</button>
+          </div>
+        </div>
+
+        <!-- Terrain color mode -->
+        <div class="control-group" id="color-mode-group">
+          <span class="control-label">Color by</span>
+          <div id="color-mode-btns">
+            <button class="color-btn active" data-color="biotope" title="Color polygons by biotope type">Biotope</button>
+            <button class="color-btn"        data-color="subtype" title="Color polygons by terrain subtype">Terrain</button>
+          </div>
+        </div>
+
+        <!-- Basemap selector -->
+        <div class="control-group" id="basemap-group">
+          <span class="control-label">Map</span>
+          <div id="basemap-btns">
+            <button class="basemap-btn active" data-basemap="osm"    title="OpenStreetMap">OSM</button>
+            <button class="basemap-btn"        data-basemap="relief"  title="Shaded relief (ESRI)">Relief</button>
+            <button class="basemap-btn"        data-basemap="blank"   title="No background">Blank</button>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div id="action-btns">
+          <button id="info-btn"       title="About this map">ℹ</button>
+          <button id="fullscreen-btn" title="Fullscreen">⛶</button>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Map + side panel -->
+    <main id="main-area">
+      <div id="map"></div>
+
+      <aside id="panel" hidden>
+        <div id="panel-header">
+          <h3 id="panel-title">Detail</h3>
+          <button id="panel-close" title="Close">✕</button>
+        </div>
+        <div id="panel-body"></div>
+      </aside>
+    </main>
+
+    <!-- Status bar: coords + zoom + hover info + loading -->
+    <div id="statusbar">
+      <span id="coords">Move cursor over map</span>
+      <span id="zoom-display"></span>
+      <span id="hover-name"></span>
+      <span id="loading-indicator" hidden>⟳ Loading…</span>
+    </div>
+
+  </div>
+
+  <!-- Info modal -->
+  <dialog id="info-modal">
+    <div id="modal-header">
+      <h2>About this map</h2>
+      <form method="dialog"><button class="modal-close-btn">✕</button></form>
+    </div>
+    <div id="modal-body">
+      <h3>Overview</h3>
+      <p>Interactive reconstruction of the Mesolithic landscape of Yorkshire, England, at approximately <strong>6200 BCE</strong> — roughly 1,000 years before the final flooding of Doggerland.</p>
+
+      <h3>Data sources</h3>
+      <ul>
+        <li><strong>Terrain:</strong> Copernicus DEM GLO-30 (30 m resolution)</li>
+        <li><strong>River network:</strong> OS Open Rivers (modern proxy)</li>
+        <li><strong>Coastline:</strong> GEBCO 2023 (−25 m sea-level offset)</li>
+        <li><strong>Lake Flixton:</strong> ADS GML data (doi:10.5284/1041580; Palmer et al. 2015)</li>
+        <li><strong>Archaeological sites:</strong> ADS — Taylor &amp; Alison 2018</li>
+      </ul>
+
+      <h3>View modes</h3>
+      <ul>
+        <li><strong>All</strong> — terrain + rivers + ecotones + sites + coastline</li>
+        <li><strong>Biotopes</strong> — biotope colors + ecotone transitions</li>
+        <li><strong>Terrain</strong> — topography + river network</li>
+        <li><strong>Sites only</strong> — archaeological sites only</li>
+      </ul>
+
+      <h3>Certainty levels</h3>
+      <ul class="certainty-list">
+        <li><span class="cert-badge cert-DIRECT">DIRECT</span> Direct archaeological evidence — solid border</li>
+        <li><span class="cert-badge cert-INDIRECT">INDIRECT</span> Indirect / analogical — dashed border</li>
+        <li><span class="cert-badge cert-INFERENCE">INFERENCE</span> Inferred from geomorphology — dotted border</li>
+        <li><span class="cert-badge cert-SPECULATION">SPECULATION</span> Hypothetical reconstruction</li>
+      </ul>
+
+      <h3>Known limitations</h3>
+      <ul>
+        <li>Terrain classification uses elevation bands — no BGS geology data (planned for v2)</li>
+        <li>River network is modern OS data, used as a proxy for Mesolithic drainage</li>
+        <li>Biotope assignments are knowledge-based estimates from published literature</li>
+        <li>656 terrain polygons at ~30 m source resolution</li>
+      </ul>
+
+      <p class="modal-footer">
+        Knowledge base: <em>Mezolit2 PoC</em> · Yorkshire bbox W:−2.5° E:0.1° S:53.5° N:54.7°
+      </p>
+    </div>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

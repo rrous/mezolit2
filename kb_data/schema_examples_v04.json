@@ -1,0 +1,587 @@
+{
+  "schema_version": "0.4",
+  "description": "Vrstvy 1-3. Zrušen rule engine — nahrazen přímými CAN_HOST hranami na BIOTOPE uzlech. Graf sám je pravidlo. TERRAIN je immutable, BIOTOPE referuje terrain.",
+
+  "schema_notes": {
+    "design_decision": "CAN_HOST hrany žijí na BIOTOPE (ne na TERRAIN) — terrain zůstává immutable a neví o biotopech. Biotop ví, na jakých terénech může existovat a s jakou kvalitou. Klient prochází graf: vyber terrain_subtype → najdi biotopy kde terrain_subtype je v can_host → aplikuj quality_modifier.",
+    "quality_modifier": "0.0–1.0. Reflektuje jak dobře daný terrain podporuje biotop — např. post_fire_grassland na bohaté říční nivě = 0.9, na pískovci = 0.4. Klient může použít pro weighted random placement nebo pro modelování produktivity.",
+    "trigger": "baseline = součást snapshotu 6200 BCE. event_* = vzniká jen při simulačním eventu. Trigger je na hraně CAN_HOST — stejný biotop může mít baseline hranu pro jeden terrain a event hranu pro jiný.",
+    "spatial_scale": "landscape = dominantní biotop oblasti | local = patch uvnitř landscape | micro = malý prvek (palouk, výchoz)",
+    "layer_separation": {
+      "KB": ["TERRAIN_FEATURE (subtype)", "BIOTOPE (s CAN_HOST hranami)", "ECOTONE"],
+      "client_usage": ["BIOTOPE_MAP = snapshot aplikace baseline hran na konkrétní terrain instances", "MODIFIED_MAP = aplikace event hran při eventu + duration tracking", "CURRENT_STATE = filtr přes season/weather query dimensions"]
+    },
+    "scientific_descriptions": "Vědecké popisy a vocabulary enums slouží vědcům a zobrazování — nejsou nutné pro funkci modelu v1. Model funguje na graph traversal + quality_modifier."
+  },
+
+  "terrain_subtypes": {
+    "note": "Terrain subtype je generický typ — existuje globálně. Konkrétní instance (tf_001 Lake Flixton) jsou anchor evidence. Klient pracuje se subtype při graph traversal, s instancemi při mapování.",
+    "records": [
+      {
+        "id": "tst_001",
+        "slug": "glacial-lake-basin",
+        "name": "Ledovcová jezerní pánev",
+        "description": "Pánev vyhloubená ledovcem, vyplněná stálou vodou s organickým dnem. Okraje přecházejí do mokřadů.",
+        "key_attributes": {
+          "hydrology": "permanent_standing_water",
+          "slope": "very_low",
+          "substrate": "organic_lacustrine_sediment",
+          "elevation_typical_m": { "max": 100 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": ["tf_001"],
+        "epistemics": { "certainty": "DIRECT", "source": "Clark 1954; Mellars & Dark 1998", "status": "VALID" }
+      },
+      {
+        "id": "tst_002",
+        "slug": "river-floodplain",
+        "name": "Říční niva",
+        "description": "Nízká rovina podél řeky, pravidelně zaplavovaná. Aluviální půda, mozaika mokřadů a lužního lesa.",
+        "key_attributes": {
+          "hydrology": "seasonal_flooding",
+          "slope": "very_low",
+          "substrate": "alluvial_clay_peat",
+          "elevation_typical_m": { "max": 50 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": ["tf_002"],
+        "epistemics": { "certainty": "DIRECT", "source": "Howard et al. 2009", "status": "VALID" }
+      },
+      {
+        "id": "tst_003",
+        "slug": "upland-limestone-plateau",
+        "name": "Vápencová vrchovinná plošina",
+        "description": "Plošina na vápencovém nebo pískovcovém podkladu, 200–500 m n.m. Dobře odvodněná, boreální les.",
+        "key_attributes": {
+          "hydrology": "well_drained",
+          "slope": "moderate",
+          "substrate": "limestone_sandstone",
+          "elevation_typical_m": { "min": 150, "max": 500 }
+        },
+        "nonrenewable_resources": ["limestone (stavební kámen, nástroje)"],
+        "anchor_instances": ["tf_003"],
+        "epistemics": { "certainty": "DIRECT", "source": "BGS Geology of Yorkshire", "status": "VALID" }
+      },
+      {
+        "id": "tst_004",
+        "slug": "fenland-basin",
+        "name": "Fenlandová pánev",
+        "description": "Rozsáhlá nízká pánev s rašelinou a vysokou hladinou podzemní vody. Sladkovodní jezera a slatinitě.",
+        "key_attributes": {
+          "hydrology": "high_water_table",
+          "slope": "flat",
+          "substrate": "peat",
+          "elevation_typical_m": { "max": 15 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": ["tf_004"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Waller 1994", "status": "VALID" }
+      },
+      {
+        "id": "tst_005",
+        "slug": "chalk-downland",
+        "name": "Křídová plošina",
+        "description": "Křídový podklad s mělkou rendzinou. Velmi propustné, suché. Flint hojný na povrchu — klíčová surovina.",
+        "key_attributes": {
+          "hydrology": "well_drained",
+          "slope": "low_to_moderate",
+          "substrate": "chalk_rendzina",
+          "elevation_typical_m": { "min": 50, "max": 300 }
+        },
+        "nonrenewable_resources": ["flint (nástroje — HIGH availability)"],
+        "anchor_instances": ["tf_005"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Allen 1997; Jacobi 1981", "status": "VALID" }
+      },
+      {
+        "id": "tst_006",
+        "slug": "upland-peat-basin",
+        "name": "Vrchovinná rašelinná pánev",
+        "description": "Vrcholky a pánve nad 300 m s formujícím se blanket bogem. Birezo-borový les na svazích, otevřená krajina na vrcholech.",
+        "key_attributes": {
+          "hydrology": "waterlogged_summit",
+          "slope": "low_to_steep",
+          "substrate": "blanket_peat_forming",
+          "elevation_typical_m": { "min": 300, "max": 720 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": ["tf_006"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Jacobi et al. 1976", "status": "VALID" }
+      },
+      {
+        "id": "tst_007",
+        "slug": "sea-cliff-rocky-coast",
+        "name": "Skalnaté pobřeží a mořský útes",
+        "description": "Skalnatá pobřežní linie s útesy. Přístup k přílivové zóně. Pevné horniny — žádný flint.",
+        "key_attributes": {
+          "hydrology": "well_drained",
+          "slope": "steep",
+          "substrate": "granite_slate_sandstone",
+          "coastal_exposure": "HIGH"
+        },
+        "nonrenewable_resources": ["kámen (stavební, nástroje — nízká kvalita vs flint)"],
+        "anchor_instances": ["tf_007"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Balaam et al. 1987", "status": "VALID" }
+      },
+      {
+        "id": "tst_008",
+        "slug": "tidal-estuary-mudflat",
+        "name": "Estuár a přílivové bahniště",
+        "description": "Brakická nebo slaná zóna u ústí řeky. Přílivová dna pokrytá bahnem — mlžiště. Bez pevné půdy.",
+        "key_attributes": {
+          "hydrology": "tidal_inundation",
+          "slope": "flat",
+          "substrate": "tidal_mud_sand",
+          "elevation_typical_m": { "min": -3, "max": 3 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": ["tf_008_stub"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Shennan et al. 2018", "status": "VALID" }
+      },
+      {
+        "id": "tst_009",
+        "slug": "river-permanent-large",
+        "name": "Velká permanentní řeka",
+        "description": "STUB. Lineární prvek — koryto velké řeky. Permanentní tok, navigovatelný člunem.",
+        "key_attributes": {
+          "hydrology": "permanent_flow",
+          "permanence": "permanent",
+          "substrate": "river_gravel",
+          "width_m_typical": { "min": 20, "max": 200 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": [],
+        "epistemics": { "certainty": "INFERENCE", "source": "STUB", "status": "HYPOTHESIS" }
+      },
+      {
+        "id": "tst_010",
+        "slug": "river-seasonal-small",
+        "name": "Malý sezónní tok",
+        "description": "STUB. Malý tok nebo potok — může vyschnout. Dynamičtější než velké řeky.",
+        "key_attributes": {
+          "hydrology": "seasonal_flow",
+          "permanence": "seasonal",
+          "substrate": "river_gravel",
+          "width_m_typical": { "min": 1, "max": 10 }
+        },
+        "nonrenewable_resources": [],
+        "anchor_instances": [],
+        "epistemics": { "certainty": "INFERENCE", "source": "STUB", "status": "HYPOTHESIS" }
+      }
+    ]
+  },
+
+  "biotopes": {
+    "node_type": "BIOTOPE",
+    "note": "CAN_HOST hrany jsou na BIOTOPE — terrain je pasivní. Klient: pro daný terrain_subtype najdi biotopy kde terrain_subtype figuruje v can_host, filtruj trigger, použij quality_modifier.",
+    "records": [
+      {
+        "id": "bt_001",
+        "slug": "boreal-shallow-lake",
+        "name": "Jezero (mělké boreální)",
+        "description": "Mělké eutrofní jezero s organickým dnem. Lake Flixton referenční lokalita.",
+        "can_host": [
+          { "terrain_subtype": "tst_001", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 1.0, "note": "referenční — Lake Flixton" },
+          { "terrain_subtype": "tst_004", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 0.9, "note": "sladkovodní jezera v fenland pánvi" }
+        ],
+        "attributes": {
+          "productivity_class": "HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 800000, "certainty": "INFERENCE", "source": "Mitsch & Gosselink 2000" },
+          "trafficability": "LOW",
+          "energy_multiplier": 2.0
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.3, "note": "tah ryb, hnízdiště ptáků" },
+          "SUMMER": { "productivity_modifier": 1.0 },
+          "AUTUMN": { "productivity_modifier": 1.2, "note": "tučné ryby před zimou" },
+          "WINTER": { "productivity_modifier": 0.4, "note": "ledový kryt — parametr pro klienta: ice_cover_weeks" }
+        },
+        "primary_threats_human": ["ledový kryt v zimě", "bez člunu nepřístupné"],
+        "epistemics": { "certainty": "DIRECT", "source": "Innes et al. 2013; Clark 1954", "status": "VALID" }
+      },
+      {
+        "id": "bt_002",
+        "slug": "boreal-fen-wetland",
+        "name": "Mokřad / slatiniště (boreální)",
+        "description": "Rašelinné a slatinné mokřady s rákosem a vrbami. Star Carr leží v tomto biotopu.",
+        "can_host": [
+          { "terrain_subtype": "tst_001", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.95, "note": "okraje jezerní pánve" },
+          { "terrain_subtype": "tst_002", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 1.0, "note": "říční niva — primární výskyt" },
+          { "terrain_subtype": "tst_004", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 0.95, "note": "fenland pánev" },
+          { "terrain_subtype": "tst_009", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.8, "note": "podél velkých řek" }
+        ],
+        "attributes": {
+          "productivity_class": "VERY_HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 1200000, "certainty": "INFERENCE", "source": "Mitsch & Gosselink 2000" },
+          "trafficability": "LOW",
+          "energy_multiplier": 2.0
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.4, "note": "hnízdiště, jedlé výhonky rákosu" },
+          "SUMMER": { "productivity_modifier": 1.2, "note": "maximum vegetace; komáři" },
+          "AUTUMN": { "productivity_modifier": 1.1 },
+          "WINTER": { "productivity_modifier": 0.5, "note": "zmrznutí usnadňuje pohyb" }
+        },
+        "primary_threats_human": ["bažiny", "sezónní záplavy"],
+        "epistemics": { "certainty": "DIRECT", "source": "Clark 1954; Mellars & Dark 1998", "status": "VALID" }
+      },
+      {
+        "id": "bt_003",
+        "slug": "boreal-birch-hazel-pine-forest",
+        "name": "Boreální les (bříza-líska-borovice)",
+        "description": "Dominantní biotop Boreální Británie. Klíčový lovecký biotop.",
+        "can_host": [
+          { "terrain_subtype": "tst_003", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 1.0, "note": "referenční — North York Moors" },
+          { "terrain_subtype": "tst_005", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 0.85, "note": "křída — les na hlubší půdě, fragmenty na strmých svazích" },
+          { "terrain_subtype": "tst_006", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.75, "note": "svahy Pennin — les ustupuje s elevací" },
+          { "terrain_subtype": "tst_002", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.7, "note": "vyšší partie nivy mimo záplavu" }
+        ],
+        "attributes": {
+          "productivity_class": "MEDIUM",
+          "primary_productivity_kcal_km2_year": { "value": 350000, "certainty": "INFERENCE", "source": "odhad z Rackham 1986" },
+          "dominant_species": ["Corylus avellana", "Betula pubescens", "Pinus sylvestris"],
+          "canopy_cover_pct": { "min": 60, "max": 85 },
+          "visibility_m": { "min": 15, "max": 50, "certainty": "INFERENCE" },
+          "trafficability": "MEDIUM_HIGH",
+          "energy_multiplier": 1.1
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 0.8 },
+          "SUMMER": { "productivity_modifier": 1.0 },
+          "AUTUMN": { "productivity_modifier": 1.5, "note": "ořechy lísky; říje jelena" },
+          "WINTER": { "productivity_modifier": 0.6 }
+        },
+        "primary_threats_human": ["dezorientace", "útok medvěda nebo kance"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Birks & Birks 1980; Huntley & Birks 1983", "status": "VALID" }
+      },
+      {
+        "id": "bt_004",
+        "slug": "open-upland",
+        "name": "Otevřená vrchovinná krajina",
+        "description": "Vzácná v Boreálu — exponované hřebeny, disturbance.",
+        "can_host": [
+          { "terrain_subtype": "tst_006", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 1.0, "note": "vrcholy Pennin — primární výskyt" },
+          { "terrain_subtype": "tst_003", "trigger": "baseline", "spatial_scale": "micro", "quality_modifier": 0.6, "note": "exponované skalní výchozy na plošině" }
+        ],
+        "attributes": {
+          "productivity_class": "LOW",
+          "primary_productivity_kcal_km2_year": { "value": 150000, "certainty": "INFERENCE", "source": "odhad z Simmons 1996" },
+          "visibility_m": { "min": 100, "max": 1000 },
+          "trafficability": "HIGH",
+          "energy_multiplier": 1.0,
+          "wind_exposure": "HIGH"
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 0.7 },
+          "SUMMER": { "productivity_modifier": 1.2, "note": "bobuloviny; pastvina pratura" },
+          "AUTUMN": { "productivity_modifier": 0.9 },
+          "WINTER": { "productivity_modifier": 0.2, "note": "nebezpečný bez úkrytu" }
+        },
+        "primary_threats_human": ["hypotermie", "bez úkrytu a paliva"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Simmons 1996; Jacobi et al. 1976", "status": "VALID" }
+      },
+      {
+        "id": "bt_005",
+        "slug": "coastal-saltmarsh-estuary",
+        "name": "Pobřežní slanisko a estuár",
+        "description": "Brakická pobřežní zóna s přílivovými plochami.",
+        "can_host": [
+          { "terrain_subtype": "tst_008", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 1.0, "note": "estuár — primární výskyt" },
+          { "terrain_subtype": "tst_004", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.6, "note": "pouze kde fenland zasahuje do přílivu — přechodná zóna" }
+        ],
+        "attributes": {
+          "productivity_class": "HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 700000, "certainty": "INFERENCE", "source": "odhad z Allen & Pye 1992" },
+          "salinity": "brackish_to_marine",
+          "trafficability": "LOW_TO_MEDIUM",
+          "energy_multiplier": 1.5
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.3, "note": "tah ryb; hnízdiště" },
+          "SUMMER": { "productivity_modifier": 1.1 },
+          "AUTUMN": { "productivity_modifier": 1.2 },
+          "WINTER": { "productivity_modifier": 0.5, "note": "zimující ptáci; bouře" }
+        },
+        "primary_threats_human": ["příliv", "zimní bouře"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Shennan et al. 2018; Allen & Pye 1992", "status": "VALID" }
+      },
+      {
+        "id": "bt_006",
+        "slug": "chalk-scrub-limestone-grassland",
+        "name": "Křídový skrub / vápencová step",
+        "description": "Poloottevřená vegetace na strmých křídových svazích. Flint na povrchu.",
+        "can_host": [
+          { "terrain_subtype": "tst_005", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 1.0, "note": "strmé svahy křídové plošiny — primární výskyt" }
+        ],
+        "attributes": {
+          "productivity_class": "LOW_TO_MEDIUM",
+          "primary_productivity_kcal_km2_year": { "value": 200000, "certainty": "INFERENCE", "source": "odhad" },
+          "flint_availability": "HIGH",
+          "visibility_m": { "min": 50, "max": 300 },
+          "trafficability": "HIGH",
+          "energy_multiplier": 1.0
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.0 },
+          "SUMMER": { "productivity_modifier": 1.1 },
+          "AUTUMN": { "productivity_modifier": 0.9 },
+          "WINTER": { "productivity_modifier": 0.4 }
+        },
+        "primary_threats_human": ["expozice bez úkrytu"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Vera 2000; Allen 1997", "status": "VALID" }
+      },
+      {
+        "id": "bt_007",
+        "slug": "riparian-gallery-forest",
+        "name": "Říční lužní les (riparian)",
+        "description": "Pás lesa podél vodních toků. Napajeliště — predátoři i lovci čekají zde.",
+        "can_host": [
+          { "terrain_subtype": "tst_002", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 1.0, "note": "říční niva — primární výskyt" },
+          { "terrain_subtype": "tst_009", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.95, "note": "podél břehů velké řeky" },
+          { "terrain_subtype": "tst_010", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 0.8, "note": "podél malých toků — užší a méně produktivní" }
+        ],
+        "attributes": {
+          "productivity_class": "HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 750000, "certainty": "INFERENCE", "source": "odhad z Rackham 1986" },
+          "dominant_species": ["Salix sp.", "Alnus glutinosa (expandující)"],
+          "width_typical_m": { "min": 20, "max": 200 },
+          "trafficability": "MEDIUM",
+          "energy_multiplier": 1.3
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.4, "note": "tah ryb říčním koridorem" },
+          "SUMMER": { "productivity_modifier": 1.2 },
+          "AUTUMN": { "productivity_modifier": 1.3, "note": "bobr aktivní" },
+          "WINTER": { "productivity_modifier": 0.7 }
+        },
+        "primary_threats_human": ["záplavy", "led na řece"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Rackham 1986; Rodwell 1991", "status": "VALID" }
+      },
+      {
+        "id": "bt_008",
+        "slug": "intertidal-coastal",
+        "name": "Přílivová zóna (pobřeží)",
+        "description": "Zóna mezi přílivem a odlivem. Měkká nebo skalnatá.",
+        "can_host": [
+          { "terrain_subtype": "tst_007", "trigger": "baseline", "spatial_scale": "local", "quality_modifier": 1.0, "note": "skalnaté pobřeží — rocky intertidal" },
+          { "terrain_subtype": "tst_008", "trigger": "baseline", "spatial_scale": "landscape", "quality_modifier": 0.95, "note": "přílivové bahniště — soft intertidal" }
+        ],
+        "attributes": {
+          "productivity_class": "MEDIUM_TO_HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 500000, "certainty": "INFERENCE", "source": "odhad z Balaam 1987" },
+          "tidal_access_window_hours": 6,
+          "trafficability": "MEDIUM",
+          "energy_multiplier": 1.3
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.2 },
+          "SUMMER": { "productivity_modifier": 1.0 },
+          "AUTUMN": { "productivity_modifier": 1.1 },
+          "WINTER": { "productivity_modifier": 0.5, "note": "bouře; mlži stále dostupní" }
+        },
+        "primary_threats_human": ["příliv", "skalnatý terén"],
+        "epistemics": { "certainty": "INDIRECT", "source": "Balaam et al. 1987; Conneller & Warren 2006", "status": "VALID" }
+      },
+      {
+        "id": "bt_009",
+        "slug": "forest-glade",
+        "name": "Lesní palouk (micro)",
+        "description": "Malá otevřená plocha uvnitř lesa. Skalní výchoz, proláklina nebo místo po padlém stromě. Hazel a jelen.",
+        "can_host": [
+          { "terrain_subtype": "tst_003", "trigger": "baseline", "spatial_scale": "micro", "quality_modifier": 0.9, "note": "skalní výchoz nebo proláklina na plošině" },
+          { "terrain_subtype": "tst_005", "trigger": "baseline", "spatial_scale": "micro", "quality_modifier": 0.85, "note": "skalní výchoz na křídě" },
+          { "terrain_subtype": "tst_006", "trigger": "baseline", "spatial_scale": "micro", "quality_modifier": 0.7, "note": "přirozená mezera v lese na svahu Pennin" }
+        ],
+        "attributes": {
+          "productivity_class": "MEDIUM_TO_HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 550000, "certainty": "INFERENCE", "source": "odhad z Vera 2000" },
+          "spatial_scale": "micro",
+          "typical_area_m2": { "min": 100, "max": 5000 },
+          "hazel_density": "HIGH",
+          "visibility_m": { "min": 20, "max": 100 },
+          "trafficability": "HIGH",
+          "energy_multiplier": 1.0
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.2 },
+          "SUMMER": { "productivity_modifier": 1.0 },
+          "AUTUMN": { "productivity_modifier": 1.8, "note": "líska na okraji — maximum ořechů; jelen" },
+          "WINTER": { "productivity_modifier": 0.5 }
+        },
+        "primary_threats_human": ["skrytý pohyb predátorů z lesa"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Vera 2000; Rackham 1986", "status": "VALID" }
+      },
+      {
+        "id": "bt_010",
+        "slug": "post-fire-grassland",
+        "name": "Post-fire grassland (event biotop)",
+        "description": "Biotop vzniklý požárem. Obohacená půda, vysoká krátkodobá produktivita, hazel pionýr na okrajích.",
+        "can_host": [
+          { "terrain_subtype": "tst_003", "trigger": "event_fire", "spatial_scale": "local", "quality_modifier": 0.85, "duration_years": null, "duration_note": "permanentní pokud na skalním výchozu nebo nad 400 m; jinak sukcese lesa za 40–80 let" },
+          { "terrain_subtype": "tst_005", "trigger": "event_fire", "spatial_scale": "local", "quality_modifier": 0.9, "duration_years": 30, "duration_note": "křída — bohatá půda, rychlý návrat lesa" },
+          { "terrain_subtype": "tst_002", "trigger": "event_fire", "spatial_scale": "local", "quality_modifier": 0.95, "duration_years": 20, "duration_note": "říční niva — nejbohatší půda, hazel excelentní" },
+          { "terrain_subtype": "tst_006", "trigger": "event_fire", "spatial_scale": "local", "quality_modifier": 0.5, "duration_years": null, "duration_note": "Penniny — chudá rašelina, les se nevrátí nad 400 m" }
+        ],
+        "attributes": {
+          "productivity_class": "MEDIUM_TO_HIGH",
+          "primary_productivity_kcal_km2_year": { "value": 450000, "certainty": "INFERENCE", "source": "odhad — event biotop" },
+          "ash_soil_enrichment": true,
+          "pioneer_species": ["Corylus avellana", "Betula pendula", "Epilobium angustifolium"],
+          "visibility_m": { "min": 50, "max": 500 },
+          "trafficability": "HIGH",
+          "energy_multiplier": 1.0
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 1.5, "note": "první sezóna — exploze bylin" },
+          "SUMMER": { "productivity_modifier": 1.3 },
+          "AUTUMN": { "productivity_modifier": 1.0 },
+          "WINTER": { "productivity_modifier": 0.3 }
+        },
+        "primary_threats_human": ["žádný kryt před predátory ani počasím"],
+        "epistemics": { "certainty": "INFERENCE", "source": "Simmons 1996; Rackham 1986", "status": "VALID" }
+      },
+      {
+        "id": "bt_011",
+        "slug": "drought-stressed-wetland",
+        "name": "Sucho-stresovaný mokřad (event biotop)",
+        "description": "Mokřad po víceletém suchu. Snížená hladina vody. Paradoxně snazší rybolov krátkodobě.",
+        "can_host": [
+          { "terrain_subtype": "tst_001", "trigger": "event_drought", "spatial_scale": "landscape", "quality_modifier": 0.6, "duration_years": 10, "duration_note": "jezerní pánev — jezero se pravděpodobně obnoví" },
+          { "terrain_subtype": "tst_004", "trigger": "event_drought", "spatial_scale": "landscape", "quality_modifier": 0.5, "duration_years": null, "duration_note": "fenland — pokud malý tok vyschne permanentně, pánev se neobnoví" },
+          { "terrain_subtype": "tst_010", "trigger": "event_drought", "spatial_scale": "local", "quality_modifier": 0.3, "duration_years": null, "duration_note": "malý sezónní tok — může vyschnout permanentně" }
+        ],
+        "attributes": {
+          "productivity_class": "MEDIUM",
+          "primary_productivity_kcal_km2_year": { "value": 300000, "certainty": "INFERENCE", "source": "odhad — event biotop" },
+          "trafficability": "MEDIUM",
+          "energy_multiplier": 1.4
+        },
+        "seasonal_modifiers": {
+          "SPRING": { "productivity_modifier": 0.8 },
+          "SUMMER": { "productivity_modifier": 1.2, "note": "ryby koncentrované ve zbývající vodě" },
+          "AUTUMN": { "productivity_modifier": 0.7 },
+          "WINTER": { "productivity_modifier": 0.3 }
+        },
+        "primary_threats_human": ["nestabilní povrch", "méně vegetace jako materiál"],
+        "epistemics": { "certainty": "SPECULATION", "source": "moderní analogie; žádná přímá mezolitická evidence", "status": "HYPOTHESIS" }
+      }
+    ]
+  },
+
+  "ecotones": {
+    "node_type": "ECOTONE",
+    "note": "Ekoton je hrana grafu mezi dvěma BIOTOPE uzly. edge_effect_factor > 1.0 = vyšší biodiverzita než průměr sousedů. Dynamické ekotony (event biotop sousedí s lesem) jsou klientská zodpovědnost.",
+    "records": [
+      {
+        "id": "ec_001",
+        "slug": "ecotone-forest-wetland",
+        "name": "Les / Mokřad",
+        "ecotone_of": ["bt_003", "bt_002"],
+        "description": "Nejvyšší biodiverzita v krajině. Star Carr stál přesně zde.",
+        "attributes": {
+          "edge_effect_factor": 1.6,
+          "edge_effect_source": "Forman & Godron 1986",
+          "human_relevance": "CRITICAL",
+          "note": "Optimální tábořiště — voda, dřevo, kryt, diverzita zdrojů"
+        },
+        "seasonal_peaks": { "SPRING": "hnízdiště ptáků, jeleni u vody", "AUTUMN": "říje jelena, ořechy lísky" },
+        "epistemics": { "certainty": "DIRECT", "source": "Clark 1954; Milner et al. 2018", "status": "VALID" }
+      },
+      {
+        "id": "ec_002",
+        "slug": "ecotone-wetland-lake",
+        "name": "Mokřad / Jezero",
+        "ecotone_of": ["bt_002", "bt_001"],
+        "description": "Bohatá zóna. Bez člunu nebo platformy těžko přístupná.",
+        "attributes": {
+          "edge_effect_factor": 1.4,
+          "edge_effect_source": "Mitsch & Gosselink 2000",
+          "human_relevance": "HIGH",
+          "access_requirement": "člun nebo platforma (doložena Star Carr)"
+        },
+        "seasonal_peaks": { "SPRING": "tah ryb, hnízdiště na pobřeží", "WINTER": "led usnadňuje přístup" },
+        "epistemics": { "certainty": "DIRECT", "source": "Milner et al. 2018", "status": "VALID" }
+      },
+      {
+        "id": "ec_003",
+        "slug": "ecotone-forest-open-upland",
+        "name": "Les / Otevřená krajina",
+        "ecotone_of": ["bt_003", "bt_004"],
+        "description": "Pastvina pratura a jelena. Ambivalentní lovecká zóna.",
+        "attributes": {
+          "edge_effect_factor": 1.3,
+          "edge_effect_source": "Forman & Godron 1986",
+          "human_relevance": "MEDIUM"
+        },
+        "seasonal_peaks": { "SUMMER": "pastva pratura a jelena", "AUTUMN": "bobule na okraji lesa" },
+        "epistemics": { "certainty": "INFERENCE", "source": "Simmons 1996; Vera 2000", "status": "VALID" }
+      },
+      {
+        "id": "ec_004",
+        "slug": "ecotone-river-forest",
+        "name": "Říční niva / Les",
+        "ecotone_of": ["bt_007", "bt_003"],
+        "description": "Napajeliště — lovecká past u vody. Bobr aktivní.",
+        "attributes": {
+          "edge_effect_factor": 1.45,
+          "edge_effect_source": "Forman & Godron 1986",
+          "human_relevance": "HIGH"
+        },
+        "seasonal_peaks": { "SPRING": "tah ryb říčním koridorem", "AUTUMN": "bobr zásoby; jelen u napajedel" },
+        "epistemics": { "certainty": "INFERENCE", "source": "Forman & Godron 1986; Kelly 2013", "status": "VALID" }
+      },
+      {
+        "id": "ec_005",
+        "slug": "ecotone-coast-wetland",
+        "name": "Pobřeží / Mokřad",
+        "ecotone_of": ["bt_005", "bt_002"],
+        "description": "Tah ryb z moře do řek. Kombinace mořských a sladkovodních zdrojů.",
+        "attributes": {
+          "edge_effect_factor": 1.5,
+          "edge_effect_source": "Allen & Pye 1992",
+          "human_relevance": "HIGH"
+        },
+        "seasonal_peaks": { "SPRING": "tah lososovitých", "AUTUMN": "ptáci před migrací" },
+        "epistemics": { "certainty": "INFERENCE", "source": "Conneller & Warren 2006", "status": "VALID" }
+      },
+      {
+        "id": "ec_006",
+        "slug": "ecotone-forest-glade",
+        "name": "Les / Palouk (micro ekoton)",
+        "ecotone_of": ["bt_003", "bt_009"],
+        "description": "Okraj palouků — nejvyšší hustota světlomilných druhů. Hazel jako sběrná zóna.",
+        "attributes": {
+          "edge_effect_factor": 1.5,
+          "edge_effect_source": "INFERENCE — analogie Forman & Godron 1986",
+          "spatial_scale": "micro",
+          "human_relevance": "HIGH"
+        },
+        "seasonal_peaks": { "SPRING": "první byliny a výhonky", "AUTUMN": "líska — maximum ořechů" },
+        "epistemics": { "certainty": "INFERENCE", "source": "Vera 2000; Rackham 1986", "status": "VALID" }
+      }
+    ]
+  },
+
+  "site_instances": {
+    "node_type": "SITE_INSTANCE",
+    "note": "Archeologická lokalita — epistemická kotva pro terrain a biotope záznamy. Není simulační entita. Geometrie pochází z ADS postglacial_2013 archivu.",
+    "records": [
+      {
+        "id": "si_001",
+        "name": "Star Carr",
+        "lakescape_role": "primary_camp",
+        "terrain_feature_id": "tf_star_carr",
+        "biotope_id": "bt_002",
+        "snapshot_reference_period": "9335-8525 cal BCE",
+        "snapshot_6200_bce_status": "post-occupation",
+        "assemblage_summary": "Rozsáhlý nálezový soubor: parohové masky (min. 33), dřevěná platforma, >22 000 mikrolitů, kostěné hroty",
+        "assemblage_external": "https://doi.org/10.5284/1041580",
+        "epistemics": {
+          "certainty": "DIRECT",
+          "source": "Clark 1954; Milner et al. 2018",
+          "status": "VALID",
+          "revision_note": "Snapshot 9335-8525 cal BCE. Pro 6200 BCE status post-occupation — podmínky srovnatelné, krajina i jezero existovaly."
+        }
+      }
+    ]
+  }
+}

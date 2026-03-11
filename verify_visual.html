@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Mezolit2 — Vizuální verifikace (~6200 BCE)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; background: #111827; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: 275px; min-width: 275px;
+      background: #1f2937; color: #d1d5db;
+      display: flex; flex-direction: column;
+      overflow: hidden; z-index: 1000;
+      box-shadow: 3px 0 12px rgba(0,0,0,0.6);
+    }
+    #sidebar-controls { flex: 1; overflow-y: auto; overflow-x: hidden; }
+    #map { flex: 1; }
+
+    .s-header { padding: 11px 13px 9px; border-bottom: 1px solid #374151; background: #111827; }
+    .s-header h1 { font-size: 14px; color: #60a5fa; font-weight: 700; }
+    .s-header small { font-size: 10.5px; color: #6b7280; }
+
+    /* ── COLLAPSIBLE SECTIONS ── */
+    .s-section { border-bottom: 1px solid #374151; }
+
+    .s-sec-hdr {
+      padding: 7px 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      user-select: none; background: #1a2232;
+    }
+    .s-sec-hdr:hover { background: #1e2d44; }
+    .s-sec-lbl {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: #6b7280; font-weight: 600; flex: 1;
+    }
+    .s-toggle {
+      font-size: 8px; color: #4b5563; display: inline-block;
+      transition: transform 0.15s; flex-shrink: 0;
+    }
+    .s-sec-body { overflow: hidden; transition: max-height 0.2s ease-out; max-height: 1200px; }
+    .s-section.collapsed .s-sec-body { max-height: 0; }
+    .s-section.collapsed .s-toggle { transform: rotate(-90deg); }
+
+    /* ── LAYER GROUP (sub-collapsible) ── */
+    .lyr-grp { padding: 0; }
+    .lyr-grp-hdr {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 12px; min-height: 28px;
+    }
+    .lyr-grp-hdr label {
+      flex: 1; font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      color: #d1d5db; user-select: none;
+    }
+    .lyr-grp-hdr input[type=checkbox] { accent-color: #3b82f6; cursor: pointer; flex-shrink: 0; }
+    .lyr-flt-btn {
+      background: none; border: none; color: #4b5563;
+      cursor: pointer; font-size: 9px; padding: 2px 4px;
+      transition: transform 0.15s; flex-shrink: 0; line-height: 1;
+    }
+    .lyr-flt-btn:hover { color: #9ca3af; }
+    .lyr-grp.flt-open .lyr-flt-btn { transform: rotate(180deg); }
+    .lyr-grp-body {
+      overflow: hidden; transition: max-height 0.2s ease-out;
+      max-height: 0; padding: 0 12px; background: #161f2e;
+    }
+    .lyr-grp.flt-open .lyr-grp-body { max-height: 500px; padding: 4px 12px 8px; }
+
+    /* ── SIMPLE LAYER ROW ── */
+    .layer-row { display: flex; align-items: center; gap: 6px; padding: 4px 12px; }
+    .layer-row input[type=checkbox] { accent-color: #3b82f6; cursor: pointer; flex-shrink: 0; }
+    .layer-row label {
+      flex: 1; font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; color: #d1d5db; user-select: none;
+    }
+    .l-spin { font-size: 11px; color: #f59e0b; display: none; }
+    .l-spin.active { display: inline; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FILTER ITEMS ── */
+    .flt-actions { display: flex; gap: 4px; padding: 3px 0 4px; }
+    .mini-btn {
+      font-size: 10px; padding: 1px 6px; background: #374151;
+      border: 1px solid #4b5563; color: #9ca3af;
+      border-radius: 3px; cursor: pointer; white-space: nowrap;
+    }
+    .mini-btn:hover { background: #4b5563; color: #e5e7eb; }
+
+    .filter-list { margin-top: 2px; }
+    .filter-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; }
+    .filter-item input[type=checkbox] { accent-color: #3b82f6; cursor: pointer; flex-shrink: 0; }
+    .filter-item label {
+      flex: 1; font-size: 11px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; color: #9ca3af; user-select: none;
+    }
+    .l-swatch { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+    .l-swatch-line { width: 16px; height: 3px; border-radius: 1px; flex-shrink: 0; }
+
+    /* ── BASEMAP ── */
+    .basemap-sel {
+      width: 100%; background: #111827; color: #9ca3af;
+      border: 1px solid #374151; padding: 5px 7px;
+      border-radius: 4px; font-size: 12px; cursor: pointer; margin: 6px 0;
+    }
+
+    /* ── BOOKMARKS ── */
+    .bm-btn {
+      display: block; width: 100%; padding: 5px 9px; margin: 2px 0;
+      background: #111827; border: 1px solid #374151; color: #93c5fd;
+      cursor: pointer; border-radius: 4px; font-size: 11.5px; text-align: left;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .bm-btn:hover { background: #1e3a5f; border-color: #3b82f6; }
+    .bm-code { font-size: 9.5px; color: #4b5563; margin-right: 5px; font-weight: 700; }
+    .bm-sub { font-size: 10px; color: #4b5563; display: block; margin-left: 28px; margin-top: 1px; }
+
+    /* ── KB PANEL (sidebar bottom) ── */
+    #kb-panel-wrap {
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-top: 2px solid #3b82f6;
+    }
+    #kb-panel-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 3px 11px; background: #0d1117;
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #3b82f6;
+      flex-shrink: 0;
+    }
+    .kb-hdr-btns { display: flex; gap: 2px; }
+    #kb-panel-hdr button {
+      background: none; border: none; color: #4b5563; cursor: pointer;
+      font-size: 12px; padding: 0 3px; border-radius: 2px;
+    }
+    #kb-panel-hdr button:hover { color: #9ca3af; background: #1f2937; }
+    #kb-panel-hdr button:disabled { opacity: 0.3; cursor: default; }
+    #kb-expand-btn { font-size: 14px !important; }
+    #kb-panel {
+      height: 185px; overflow-y: auto; overflow-x: hidden;
+      padding: 8px 11px; background: #111827; font-size: 11px;
+    }
+    .kb-hint { color: #374151; font-style: italic; font-size: 11px; }
+    .kb-feat-id { font-size: 10px; color: #4b5563; margin-bottom: 6px; font-family: monospace; }
+    .kb-block { margin-bottom: 9px; }
+    .kb-block-hdr {
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px;
+      color: #4b5563; font-weight: 700; margin-bottom: 3px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .kb-block-hdr span { font-size: 10px; color: #6b7280; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .kb-name { font-size: 12.5px; color: #e5e7eb; font-weight: 600; margin-bottom: 3px; }
+    .kb-desc { font-size: 10.5px; color: #9ca3af; line-height: 1.45; margin-bottom: 5px; }
+    .kb-attrs { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
+    .kb-attr { display: flex; gap: 5px; }
+    .kb-attr-k { color: #4b5563; font-size: 10px; min-width: 80px; flex-shrink: 0; }
+    .kb-attr-v { color: #d1d5db; font-size: 10px; }
+    .kb-seasonal { display: flex; gap: 4px; margin-bottom: 5px; }
+    .kb-season {
+      flex: 1; background: #1f2937; border-radius: 4px; padding: 3px 4px; text-align: center;
+    }
+    .kb-season-name { font-size: 8.5px; color: #6b7280; }
+    .kb-season-val { font-size: 10.5px; font-weight: 700; }
+    .kb-season-bar { height: 3px; border-radius: 1px; margin-top: 2px; }
+    .kb-threats { font-size: 10px; color: #fbbf24; margin-bottom: 4px; }
+    .kb-source { font-size: 9.5px; color: #374151; margin-top: 3px; }
+    .kb-cert {
+      display: inline-block; font-size: 9px; padding: 1px 5px;
+      border-radius: 9px; font-weight: 700; margin-right: 4px;
+    }
+    .cert-DIRECT    { background: #052e16; color: #4ade80; }
+    .cert-INDIRECT  { background: #1e3a5f; color: #60a5fa; }
+    .cert-INFERENCE { background: #451a03; color: #f97316; }
+    .cert-SPECULATION { background: #3b0764; color: #c084fc; }
+    .kb-sep { border: none; border-top: 1px solid #1f2937; margin: 7px 0; }
+
+    /* ── KB MODAL ── */
+    #kb-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 3000; display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    #kb-modal-inner {
+      background: #1f2937; border: 1px solid #374151; border-radius: 8px;
+      max-width: min(96vw, 980px); width: 100%; max-height: 82vh;
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.9);
+    }
+    #kb-modal-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; background: #0d1117;
+      border-bottom: 2px solid #3b82f6; flex-shrink: 0;
+    }
+    .modal-title { font-size: 11px; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+    .modal-feat-id { color: #93c5fd; font-family: monospace; font-size: 12px; }
+    .modal-close {
+      background: none; border: none; color: #6b7280;
+      cursor: pointer; font-size: 16px; padding: 2px 7px; border-radius: 3px;
+    }
+    .modal-close:hover { color: #e5e7eb; background: #374151; }
+    #kb-modal-body {
+      overflow-y: auto; overflow-x: auto; padding: 20px;
+      display: flex; align-items: flex-start; gap: 0;
+      min-height: 200px;
+    }
+    #kb-modal-body::-webkit-scrollbar { height: 5px; width: 5px; }
+    #kb-modal-body::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    .kb-mcard {
+      background: #111827; border: 1px solid #374151; border-radius: 6px;
+      padding: 14px 16px; min-width: 200px; max-width: 300px; flex: 1; flex-shrink: 0;
+      font-size: 11px;
+    }
+    .kb-mcard.mcard-root { border-color: #3b82f6; max-width: 195px; min-width: 160px; }
+    .kb-mcard.mcard-site { border-color: #f59e0b; }
+    .kb-mcard-arrow {
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 0 10px; color: #374151; font-size: 20px;
+      flex-shrink: 0; padding-top: 22px;
+    }
+    .kb-mcard-hdr {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: #4b5563; font-weight: 700; margin-bottom: 8px;
+    }
+    .kb-mcard-name { font-size: 14px; color: #e5e7eb; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+    .kb-mcard-desc { font-size: 11px; color: #9ca3af; line-height: 1.5; margin-bottom: 10px; }
+    .kb-mcard-attrs { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+
+    /* ── COORDS ── */
+    #coords {
+      background: #0d1117; color: #374151; font-size: 10px;
+      padding: 4px 10px; font-family: 'Courier New', monospace;
+      border-top: 1px solid #1f2937; flex-shrink: 0;
+    }
+
+    /* ── SCROLLBARS ── */
+    #sidebar-controls::-webkit-scrollbar { width: 4px; }
+    #sidebar-controls::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+    #kb-panel::-webkit-scrollbar { width: 3px; }
+    #kb-panel::-webkit-scrollbar-thumb { background: #374151; }
+
+    /* ── LEAFLET ── */
+    .leaflet-control-scale-line { background: rgba(17,24,39,0.85); color: #9ca3af; border-color: #374151; }
+
+    /* ── SECTION PADDING ── */
+    .sec-inner { padding: 6px 12px 8px; }
+  </style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="s-header">
+    <h1>Mezolit2 — Vizuální verifikace</h1>
+    <small>Yorkshire · ~6200 BCE · Sea level −25 m · <span style="color:#3b82f6">v7</span></small>
+  </div>
+
+  <div id="sidebar-controls">
+
+  <!-- ══ PODKLADOVÁ MAPA ══ -->
+  <div class="s-section" id="sec-basemap">
+    <div class="s-sec-hdr" onclick="toggleSec('sec-basemap')">
+      <span class="s-toggle">▼</span>
+      <span class="s-sec-lbl">Podkladová mapa</span>
+    </div>
+    <div class="s-sec-body">
+      <div class="sec-inner">
+        <select class="basemap-sel" id="basemap-sel">
+          <option value="osm">OpenStreetMap</option>
+          <option value="satellite">Esri — Satelitní snímky</option>
+          <option value="topo">Esri — Topografická</option>
+          <option value="relief">Esri — Stínovaný reliéf</option>
+          <option value="grey">CartoDB — Světlá (neutral)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ VRSTVY ══ -->
+  <div class="s-section" id="sec-layers">
+    <div class="s-sec-hdr" onclick="toggleSec('sec-layers')">
+      <span class="s-toggle">▼</span>
+      <span class="s-sec-lbl">Vrstvy</span>
+    </div>
+    <div class="s-sec-body">
+
+      <!-- Pobřeží -->
+      <div class="layer-row">
+        <input type="checkbox" id="l-coast" checked>
+        <label for="l-coast"><span class="l-swatch-line" style="background:#ef4444;"></span>Pobřeží ~6200 BCE</label>
+        <span class="l-spin" id="sp-coast">↻</span>
+      </div>
+
+      <!-- Řeky -->
+      <div class="layer-row">
+        <input type="checkbox" id="l-rivers">
+        <label for="l-rivers"><span class="l-swatch-line" style="background:#3b82f6;"></span>Řeky (OS Open Rivers)</label>
+        <span class="l-spin" id="sp-rivers">↻</span>
+      </div>
+
+      <!-- Ekotony -->
+      <div class="layer-row">
+        <input type="checkbox" id="l-ecotones">
+        <label for="l-ecotones"><span class="l-swatch-line" style="background:#fbbf24;"></span>Ekotony</label>
+        <span class="l-spin" id="sp-ecotones">↻</span>
+      </div>
+
+      <!-- Terén (s filtry) -->
+      <div class="lyr-grp" id="lg-terrain">
+        <div class="lyr-grp-hdr">
+          <input type="checkbox" id="l-terrain" onchange="onLayerToggle('terrain',this.checked)">
+          <label for="l-terrain"><span class="l-swatch" style="background:#6b7280"></span>Terén (subtyp)</label>
+          <span class="l-spin" id="sp-terrain">↻</span>
+          <button class="lyr-flt-btn" onclick="toggleLyrFlt('lg-terrain')" title="Filtry subtypů">▼</button>
+        </div>
+        <div class="lyr-grp-body">
+          <div class="flt-actions">
+            <button class="mini-btn" onclick="setAllFilters('terrain', true)">Vše</button>
+            <button class="mini-btn" onclick="setAllFilters('terrain', false)">Nic</button>
+          </div>
+          <div id="terrain-filters" class="filter-list"></div>
+        </div>
+      </div>
+
+      <!-- Biotopy (s filtry) -->
+      <div class="lyr-grp" id="lg-biotopes">
+        <div class="lyr-grp-hdr">
+          <input type="checkbox" id="l-biotopes" onchange="onLayerToggle('biotopes',this.checked)">
+          <label for="l-biotopes"><span class="l-swatch" style="background:#15803d"></span>Biotopy</label>
+          <span class="l-spin" id="sp-biotopes">↻</span>
+          <button class="lyr-flt-btn" onclick="toggleLyrFlt('lg-biotopes')" title="Filtry biotopů">▼</button>
+        </div>
+        <div class="lyr-grp-body">
+          <div class="flt-actions">
+            <button class="mini-btn" onclick="setAllFilters('biotopes', true)">Vše</button>
+            <button class="mini-btn" onclick="setAllFilters('biotopes', false)">Nic</button>
+          </div>
+          <div id="biotope-filters" class="filter-list"></div>
+        </div>
+      </div>
+
+      <!-- Lokality (sites, s filtry) -->
+      <div class="lyr-grp" id="lg-sites">
+        <div class="lyr-grp-hdr">
+          <input type="checkbox" id="l-sites" onchange="onLayerToggle('sites',this.checked)">
+          <label for="l-sites"><span class="l-swatch" style="background:#fbbf24"></span>Archeologické lokality</label>
+          <span class="l-spin" id="sp-sites">↻</span>
+          <button class="lyr-flt-btn" onclick="toggleLyrFlt('lg-sites')" title="Filtry rolí">▼</button>
+        </div>
+        <div class="lyr-grp-body">
+          <div class="flt-actions">
+            <button class="mini-btn" onclick="setAllFilters('sites', true)">Vše</button>
+            <button class="mini-btn" onclick="setAllFilters('sites', false)">Nic</button>
+          </div>
+          <div id="site-filters" class="filter-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /sec-layers body -->
+  </div>
+
+  <!-- ══ VERIFIKAČNÍ BODY ══ -->
+  <div class="s-section" id="sec-bookmarks">
+    <div class="s-sec-hdr" onclick="toggleSec('sec-bookmarks')">
+      <span class="s-toggle">▼</span>
+      <span class="s-sec-lbl">Verifikační body</span>
+    </div>
+    <div class="s-sec-body">
+      <div class="sec-inner" style="padding-top:4px">
+        <button class="bm-btn" onclick="flyTo('overview')"><span class="bm-code">2.1</span>Yorkshire — přehled<span class="bm-sub">Celkový pohled na všechna data</span></button>
+        <button class="bm-btn" onclick="flyTo('coast')"><span class="bm-code">2.1.1</span>Pobřeží / Doggerland<span class="bm-sub">Humber estuary · vs Shennan 2018</span></button>
+        <button class="bm-btn" onclick="flyTo('terrain')"><span class="bm-code">2.1.2</span>Terrain — Wolds / Moors<span class="bm-sub">Vápenec + křída + rašelina · vs BGS</span></button>
+        <button class="bm-btn" onclick="flyTo('starcarr')"><span class="bm-code">2.1.3</span>Star Carr / Lake Flixton<span class="bm-sub">tst_001 jezero · vs Milner et al. 2018</span></button>
+        <button class="bm-btn" onclick="flyTo('rivers')"><span class="bm-code">2.1.4</span>Ouse / Derwent / Hull<span class="bm-sub">Říční síť vs niva (tst_002)</span></button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /#sidebar-controls -->
+
+  <!-- ══ KB INFO PANEL ══ -->
+  <div id="kb-panel-wrap">
+    <div id="kb-panel-hdr">
+      <span>KB · info</span>
+      <div class="kb-hdr-btns">
+        <button id="kb-expand-btn" onclick="expandKBModal()" title="Rozbalit do středu" disabled>⤢</button>
+        <button onclick="clearInfo()" title="Vymazat">✕</button>
+      </div>
+    </div>
+    <div id="kb-panel">
+      <div class="kb-hint">Klikni na polygon, linii nebo lokalitu<br>pro informace z KB</div>
+    </div>
+  </div>
+
+  <div id="coords">Přesuň kurzor nad mapu…</div>
+</div><!-- /#sidebar -->
+
+<div id="map"></div>
+
+<!-- ══ KB MODAL ══ -->
+<div id="kb-modal" style="display:none" onclick="onModalBgClick(event)">
+  <div id="kb-modal-inner">
+    <div id="kb-modal-hdr">
+      <span class="modal-title">KB · Info — <span id="kb-modal-title" class="modal-feat-id"></span></span>
+      <button class="modal-close" onclick="closeKBModal()" title="Zavřít">✕</button>
+    </div>
+    <div id="kb-modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  KNOWLEDGE BASE — TERÉN
+// ════════════════════════════════════════════════════════════
+
+const KB_TERRAIN = {
+  tst_001: {
+    name: 'Ledovcová jezerní pánev',
+    description: 'Pánev vyhloubená ledovcem, vyplněná stálou vodou s organickým dnem. Okraje přecházejí do mokřadů. Lake Flixton referenční lokalita.',
+    hydrology: 'permanent_standing_water', slope: 'very_low (< 0.5°)',
+    substrate: 'organic_lacustrine_sediment', elevation: '< 100 m n.m.',
+    resources: [], certainty: 'DIRECT', source: 'Clark 1954; Mellars & Dark 1998', status: 'VALID',
+  },
+  tst_002: {
+    name: 'Říční niva',
+    description: 'Nízká rovina podél řeky, pravidelně zaplavovaná. Aluviální půda, mozaika mokřadů a lužního lesa.',
+    hydrology: 'seasonal_flooding', slope: 'very_low (0.5–2°)',
+    substrate: 'alluvial_clay_peat', elevation: '< 50 m n.m.',
+    resources: [], certainty: 'DIRECT', source: 'Howard et al. 2009', status: 'VALID',
+  },
+  tst_003: {
+    name: 'Vápencová vrchovinná plošina',
+    description: 'Plošina na vápencovém nebo pískovcovém podkladu, 200–500 m n.m. Dobře odvodněná, boreální les.',
+    hydrology: 'well_drained', slope: 'moderate (5–15°)',
+    substrate: 'limestone_sandstone', elevation: '150–500 m n.m.',
+    resources: ['limestone (stavební kámen, nástroje)'],
+    certainty: 'DIRECT', source: 'BGS Geology of Yorkshire', status: 'VALID',
+  },
+  tst_004: {
+    name: 'Fenlandová pánev',
+    description: 'Rozsáhlá nízká pánev s rašelinou a vysokou hladinou podzemní vody. Sladkovodní jezera a slatiniště.',
+    hydrology: 'high_water_table', slope: 'flat (< 0.5°)',
+    substrate: 'peat', elevation: '< 15 m n.m.',
+    resources: [], certainty: 'INFERENCE', source: 'Waller 1994', status: 'VALID',
+  },
+  tst_005: {
+    name: 'Křídová plošina',
+    description: 'Křídový podklad s mělkou rendzinou. Velmi propustný, suchý. Flint hojný na povrchu – klíčová surovina.',
+    hydrology: 'well_drained', slope: 'low_to_moderate (2–15°)',
+    substrate: 'chalk_rendzina (pH 7.5–8.5)', elevation: '50–300 m n.m.',
+    resources: ['flint — HIGH availability (nástroje)'],
+    certainty: 'INDIRECT', source: 'Allen 1997; Jacobi 1981', status: 'VALID',
+  },
+  tst_006: {
+    name: 'Vrchovinná rašelinná pánev',
+    description: 'Vrcholky a pánve nad 300 m s formujícím se blanket bogem (~6200 BCE max 0.5 m). Břízo-borový les na svazích.',
+    hydrology: 'waterlogged_summit', slope: 'low_to_steep (2–35°)',
+    substrate: 'blanket_peat_forming', elevation: '300–720 m n.m.',
+    resources: [], certainty: 'INDIRECT', source: 'Jacobi et al. 1976', status: 'VALID',
+  },
+  tst_007: {
+    name: 'Skalnaté pobřeží a mořský útes',
+    description: 'Skalnatá pobřežní linie s útesy. Přístup k přílivové zóně. Pevné horniny – žádný flint.',
+    hydrology: 'well_drained', slope: 'steep (15–35°)',
+    substrate: 'granite_slate_sandstone', elevation: 'pobřežní zóna',
+    resources: ['kámen (stavební, nástroje – nízká kvalita vs flint)'],
+    certainty: 'INDIRECT', source: 'Balaam et al. 1987', status: 'VALID',
+  },
+  tst_008: {
+    name: 'Estuár a přílivové bahniště',
+    description: 'Brakická nebo slaná zóna u ústí řeky. Přílivová dna pokrytá bahnem – mlžiště. Bez pevné půdy.',
+    hydrology: 'tidal_inundation', slope: 'flat',
+    substrate: 'tidal_mud_sand', elevation: '-3 až +3 m n.m.',
+    resources: [], certainty: 'INFERENCE', source: 'Shennan et al. 2018', status: 'VALID',
+  },
+};
+
+// ════════════════════════════════════════════════════════════
+//  KNOWLEDGE BASE — BIOTOPY
+// ════════════════════════════════════════════════════════════
+
+const KB_BIOTOPE = {
+  bt_001: {
+    name: 'Jezero (mělké boreální)',
+    description: 'Mělké eutrofní jezero s organickým dnem. Lake Flixton referenční lokalita pro ~6200 BCE.',
+    productivity: 'HIGH', kcal: 800000, trafficability: 'LOW', energy_mult: 2.0,
+    seasonal: { SPRING: 1.3, SUMMER: 1.0, AUTUMN: 1.2, WINTER: 0.4 },
+    seasonal_notes: { SPRING: 'tah ryb, hnízdiště ptáků', WINTER: 'ledový kryt (ice_cover_weeks)' },
+    threats: ['ledový kryt v zimě', 'bez člunu nepřístupné'],
+    certainty: 'DIRECT', source: 'Innes et al. 2013; Clark 1954', status: 'VALID',
+  },
+  bt_002: {
+    name: 'Mokřad / slatiniště (boreální)',
+    description: 'Rašelinné a slatinné mokřady s rákosem a vrbami. Star Carr leží v tomto biotopu.',
+    productivity: 'VERY_HIGH', kcal: 1200000, trafficability: 'LOW', energy_mult: 2.0,
+    seasonal: { SPRING: 1.4, SUMMER: 1.2, AUTUMN: 1.1, WINTER: 0.3 },
+    seasonal_notes: { SPRING: 'hnízdiště, jedlé výhonky rákosu', SUMMER: 'max vegetace; komáři' },
+    threats: ['zimní mráz', 'pohyb vyžaduje platformy nebo led'],
+    certainty: 'DIRECT', source: 'Innes et al. 2013; Clark 1954', status: 'VALID',
+  },
+  bt_003: {
+    name: 'Boreální les (bříza-líska-borovice)',
+    description: 'Dominantní biotop Boreální Británie. Klíčový lovecký biotop s hustým podrostem.',
+    productivity: 'MEDIUM', kcal: 350000, trafficability: 'MEDIUM_HIGH', energy_mult: 1.1,
+    species: ['Corylus avellana', 'Betula pubescens', 'Pinus sylvestris'],
+    canopy: '60–85 %', visibility: '15–50 m',
+    seasonal: { SPRING: 1.2, SUMMER: 1.0, AUTUMN: 1.5, WINTER: 0.6 },
+    seasonal_notes: { AUTUMN: 'líska – maximum ořechů', WINTER: 'jelen – červ zimuje' },
+    certainty: 'INDIRECT', source: 'Innes et al. 2013; Rackham 1986', status: 'VALID',
+  },
+  bt_004: {
+    name: 'Otevřená vrchovinná krajina',
+    description: 'Vzácný v Boreálu – exponované hřebeny, disturbance. Bez přístřeší.',
+    productivity: 'LOW', kcal: 150000, trafficability: 'HIGH', energy_mult: 1.0,
+    visibility: '100–1000 m',
+    seasonal: { SPRING: 0.7, SUMMER: 1.2, AUTUMN: 0.9, WINTER: 0.2 },
+    seasonal_notes: { SUMMER: 'bobuloviny; pastvina pratura', WINTER: 'nebezpečný bez úkrytu' },
+    threats: ['hypotermie', 'bez úkrytu a paliva'],
+    certainty: 'INDIRECT', source: 'Simmons 1996; Jacobi et al. 1976', status: 'VALID',
+  },
+  bt_005: {
+    name: 'Pobřežní slanisko a estuár',
+    description: 'Brakická pobřežní zóna s přílivovými plochami.',
+    productivity: 'HIGH', kcal: 700000, trafficability: 'LOW_TO_MEDIUM', energy_mult: 1.5,
+    salinity: 'brackish_to_marine',
+    seasonal: { SPRING: 1.3, SUMMER: 1.1, AUTUMN: 1.2, WINTER: 0.5 },
+    seasonal_notes: { SPRING: 'tah ryb; hnízdiště', WINTER: 'zimující ptáci; bouře' },
+    threats: ['příliv', 'zimní bouře'],
+    certainty: 'INFERENCE', source: 'Shennan et al. 2018; Allen & Pye 1992', status: 'VALID',
+  },
+  bt_006: {
+    name: 'Křídový skrub / vápencová step',
+    description: 'Polootevřená vegetace na strmých křídových svazích. Flint na povrchu.',
+    productivity: 'LOW_TO_MEDIUM', kcal: 200000, trafficability: 'HIGH', energy_mult: 1.0,
+    flint: 'HIGH', visibility: '50–300 m',
+    seasonal: { SPRING: 1.0, SUMMER: 1.1, AUTUMN: 0.9, WINTER: 0.4 },
+    seasonal_notes: {},
+    threats: ['expozice bez úkrytu'],
+    certainty: 'INFERENCE', source: 'Vera 2000; Allen 1997', status: 'VALID',
+  },
+  bt_007: {
+    name: 'Říční lužní les (riparian)',
+    description: 'Pás lesa podél vodních toků. Napajeliště – predátoři i lovci čekají zde.',
+    productivity: 'HIGH', kcal: 750000, trafficability: 'MEDIUM', energy_mult: 1.3,
+    species: ['Salix sp.', 'Alnus glutinosa (expandující)'],
+    seasonal: { SPRING: 1.4, SUMMER: 1.2, AUTUMN: 1.3, WINTER: 0.8 },
+    seasonal_notes: { SPRING: 'tah ryb říčním koridorem', AUTUMN: 'bobr aktivní' },
+    certainty: 'INFERENCE', source: 'Rackham 1986', status: 'VALID',
+  },
+  bt_008: {
+    name: 'Přílivová zóna (pobřeží)',
+    description: 'Zóna mezi přílivem a odlivem. Měkká nebo skalnatá. Přístupová okna 6 h.',
+    productivity: 'MEDIUM_TO_HIGH', kcal: 500000, trafficability: 'MEDIUM', energy_mult: 1.3,
+    tidal_window_h: 6,
+    seasonal: { SPRING: 1.2, SUMMER: 1.0, AUTUMN: 1.1, WINTER: 0.5 },
+    seasonal_notes: { WINTER: 'bouře; mlži stále dostupné' },
+    threats: ['příliv', 'skalnatý terén'],
+    certainty: 'INDIRECT', source: 'Balaam et al. 1987; Conneller & Warren 2006', status: 'VALID',
+  },
+  bt_009: {
+    name: 'Lesní palouk (micro)',
+    description: 'Malá otevřená plocha uvnitř lesa. Skalní výchoz, proláklina nebo místo po padlém stromě. Hazel a jelen.',
+    productivity: 'MEDIUM_TO_HIGH', kcal: 550000, trafficability: 'HIGH', energy_mult: 1.0,
+    scale: 'micro (100–5 000 m²)', hazel: 'HIGH density', visibility: '20–100 m',
+    seasonal: { SPRING: 1.2, SUMMER: 1.0, AUTUMN: 1.8, WINTER: 0.5 },
+    seasonal_notes: { AUTUMN: 'líska na okraji – maximum ořechů' },
+    certainty: 'INFERENCE', source: 'Vera 2000', status: 'VALID',
+  },
+};
+
+// ════════════════════════════════════════════════════════════
+//  KNOWLEDGE BASE — LAKESCAPE ROLES (sites)
+// ════════════════════════════════════════════════════════════
+
+const KB_SITE_ROLES = {
+  primary_camp: {
+    name: 'Hlavní sídlištní tábor',
+    description: 'Místo s přímými doklady trvalého nebo opakovaného osídlení. Dřevěné struktury, kamenné artefakty, zpracované kosti, organický odpad.',
+    evidence: ['hearthstones', 'worked bone', 'lithic scatter', 'wooden platform'],
+    features: 'Star Carr — dřevěná platforma (c. 9000 BP); antlerové artefakty',
+    certainty: 'DIRECT', source: 'Clark 1954; Milner et al. 2018',
+  },
+  island_site: {
+    name: 'Ostrůvková lokalita',
+    description: 'Lokalita na zvýšeném terénu obklopeném vodou nebo mokřadem. Chráněná poloha s dobrým výhledem na jezero.',
+    evidence: ['surface scatter', 'small lithic assemblage', 'faunal remains'],
+    features: 'Výběžky vyvýšeného terénu v Lake Flixton bažinách',
+    certainty: 'INDIRECT', source: 'Taylor & Alison 2018; Palmer et al. 2015',
+  },
+  shore_camp: {
+    name: 'Pobřežní tábor',
+    description: 'Krátkodobý lovecký nebo rybářský tábor na břehu jezera. Sezónní využití, přímý přístup k vodním zdrojům.',
+    evidence: ['small lithic scatter', 'hearth features', 'fish remains'],
+    features: 'Přímý přístup k jezerním zdrojům (ryby, ptáci, voda)',
+    certainty: 'INDIRECT', source: 'Palmer et al. 2015',
+  },
+  find_scatter: {
+    name: 'Ojedinělé nálezy',
+    description: 'Izolované nebo slabé nálezové soubory bez jasné struktury. Přechodné aktivity, průchod krajinou nebo ztracené předměty.',
+    evidence: ['isolated lithics', 'no structural features'],
+    features: 'Nízká hustota artefaktů; žádné konstrukční prvky',
+    certainty: 'INDIRECT', source: 'Palmer et al. 2015; ADS postglacial_2013',
+  },
+};
+
+// ════════════════════════════════════════════════════════════
+//  FILTER CONFIG
+// ════════════════════════════════════════════════════════════
+
+const TERRAIN_FILTERS = [
+  { id: 'tst_001', color: '#1d6f9a', label: 'tst_001 · Glacial lake basin' },
+  { id: 'tst_002', color: '#38bdf8', label: 'tst_002 · Říční niva' },
+  { id: 'tst_003', color: '#b8956a', label: 'tst_003 · Limestone plateau' },
+  { id: 'tst_004', color: '#4d7c3f', label: 'tst_004 · Fenland / Mokřad' },
+  { id: 'tst_005', color: '#c8b84a', label: 'tst_005 · Chalk Wold' },
+  { id: 'tst_006', color: '#166534', label: 'tst_006 · Upland peat basin' },
+  { id: 'tst_007', color: '#0d9488', label: 'tst_007 · Rocky coast' },
+  { id: 'tst_008', color: '#78350f', label: 'tst_008 · Estuary / mudflat' },
+];
+
+const BIOTOPE_FILTERS = [
+  { id: 'bt_001', color: '#1e40af', label: 'bt_001 · Open water' },
+  { id: 'bt_002', color: '#65a30d', label: 'bt_002 · Mokřad / slatiniště' },
+  { id: 'bt_003', color: '#14532d', label: 'bt_003 · Boreal forest' },
+  { id: 'bt_004', color: '#15803d', label: 'bt_004 · Open upland' },
+  { id: 'bt_005', color: '#0f766e', label: 'bt_005 · Coastal saltmarsh' },
+  { id: 'bt_006', color: '#a3e635', label: 'bt_006 · Chalk scrub' },
+  { id: 'bt_007', color: '#0284c7', label: 'bt_007 · Riparian forest' },
+  { id: 'bt_008', color: '#ca8a04', label: 'bt_008 · Intertidal zone' },
+  { id: 'bt_009', color: '#eab308', label: 'bt_009 · Forest glade (micro)' },
+];
+
+const SITE_FILTERS = [
+  { id: 'primary_camp', color: '#fbbf24', label: '★ Hlavní tábor (primary camp)' },
+  { id: 'island_site',  color: '#f97316', label: '◆ Ostrůvek (island site)' },
+  { id: 'shore_camp',   color: '#06b6d4', label: '~ Pobřežní tábor (shore camp)' },
+  { id: 'find_scatter', color: '#8b5cf6', label: '· Ojedinělé nálezy (find scatter)' },
+];
+
+// ════════════════════════════════════════════════════════════
+//  BUILD FILTER CHECKBOXES
+// ════════════════════════════════════════════════════════════
+
+function buildFilters(containerId, filters, type) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = filters.map(({ id, color, label }) => `
+    <div class="filter-item">
+      <input type="checkbox" id="f-${id}" checked
+             onchange="onFilterChange('${type}','${id}',this.checked)">
+      <label for="f-${id}">
+        <span class="l-swatch" style="background:${color}"></span>
+        ${label}
+      </label>
+    </div>
+  `).join('');
+}
+
+buildFilters('terrain-filters', TERRAIN_FILTERS, 'terrain');
+buildFilters('biotope-filters', BIOTOPE_FILTERS, 'biotopes');
+buildFilters('site-filters',    SITE_FILTERS,    'sites');
+
+// ════════════════════════════════════════════════════════════
+//  MAP INIT
+// ════════════════════════════════════════════════════════════
+
+const map = L.map('map', { center: [54.1, -1.30], zoom: 8, zoomControl: true });
+L.control.scale({ imperial: false, metric: true, maxWidth: 200 }).addTo(map);
+
+// ════════════════════════════════════════════════════════════
+//  BASEMAPS
+// ════════════════════════════════════════════════════════════
+
+const BASEMAPS = {
+  osm:       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+               { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19 }),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+               { attribution: '© Esri, Maxar', maxZoom: 19 }),
+  topo:      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+               { attribution: '© Esri', maxZoom: 18 }),
+  relief:    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',
+               { attribution: '© Esri', maxZoom: 13 }),
+  grey:      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+               { attribution: '© CARTO', maxZoom: 19 }),
+};
+BASEMAPS.osm.addTo(map);
+document.getElementById('basemap-sel').addEventListener('change', function () {
+  Object.values(BASEMAPS).forEach(l => map.removeLayer(l));
+  BASEMAPS[this.value].addTo(map);
+});
+
+// ════════════════════════════════════════════════════════════
+//  COLORS + STYLE FUNCTIONS
+// ════════════════════════════════════════════════════════════
+
+const TERRAIN_COLORS = Object.fromEntries(TERRAIN_FILTERS.map(f => [f.id, f.color]));
+const BIOTOPE_COLORS = Object.fromEntries(BIOTOPE_FILTERS.map(f => [f.id, f.color]));
+const SITE_COLORS    = Object.fromEntries(SITE_FILTERS.map(f => [f.id, f.color]));
+
+function styleTerrain(f) {
+  const c = TERRAIN_COLORS[f.properties?.terrain_subtype_id] || '#6b7280';
+  return { fillColor: c, color: '#000', weight: 0.4, fillOpacity: 0.65, opacity: 0.6 };
+}
+function styleBiotope(f) {
+  const c = BIOTOPE_COLORS[f.properties?.biotope_id] || '#6b7280';
+  return { fillColor: c, color: '#000', weight: 0.4, fillOpacity: 0.65, opacity: 0.6 };
+}
+function styleRiver()    { return { color: '#3b82f6', weight: 1.3, opacity: 0.75 }; }
+function styleCoast()    { return { color: '#ef4444', weight: 2.5, fill: false, opacity: 0.9 }; }
+function styleEcotone(f) {
+  const colors = ['#f97316','#06b6d4','#84cc16','#a855f7','#f43f5e','#fbbf24'];
+  const n = parseInt((f.properties?.id || 'ec_001').replace(/\D/g,''), 10) - 1;
+  return { color: colors[n % colors.length], weight: 2.5, opacity: 0.9, dashArray: '7,4' };
+}
+function styleSite(f) {
+  const role = f.properties?.lakescape_role;
+  const c = SITE_COLORS[role] || '#9ca3af';
+  return { fillColor: c, color: '#1f2937', weight: 2, fillOpacity: 0.9, opacity: 1.0 };
+}
+
+const HIDDEN_STYLE = { weight: 0, opacity: 0, fillOpacity: 0 };
+
+// ════════════════════════════════════════════════════════════
+//  ACTIVE FILTERS
+// ════════════════════════════════════════════════════════════
+
+const activeFilters = {
+  terrain:  new Set(TERRAIN_FILTERS.map(f => f.id)),
+  biotopes: new Set(BIOTOPE_FILTERS.map(f => f.id)),
+  sites:    new Set(SITE_FILTERS.map(f => f.id)),
+};
+
+function onFilterChange(type, id, checked) {
+  if (checked) activeFilters[type].add(id); else activeFilters[type].delete(id);
+  applyFilter(type);
+}
+
+function setAllFilters(type, checked) {
+  const filters = { terrain: TERRAIN_FILTERS, biotopes: BIOTOPE_FILTERS, sites: SITE_FILTERS }[type] || [];
+  filters.forEach(({ id }) => {
+    const cb = document.getElementById('f-' + id);
+    if (cb) cb.checked = checked;
+    if (checked) activeFilters[type].add(id); else activeFilters[type].delete(id);
+  });
+  applyFilter(type);
+}
+
+function applyFilter(type) {
+  const layer = _layers[type];
+  if (!layer) return;
+  const propKey = type === 'terrain' ? 'terrain_subtype_id' : type === 'biotopes' ? 'biotope_id' : 'lakescape_role';
+  const styleFn = type === 'terrain' ? styleTerrain : type === 'biotopes' ? styleBiotope : styleSite;
+  const active  = activeFilters[type];
+  layer.eachLayer(l => {
+    const id = l.feature?.properties?.[propKey];
+    l.setStyle(active.has(id) ? styleFn(l.feature) : HIDDEN_STYLE);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  LAYER LOADING (API-based, bbox-filtered)
+// ════════════════════════════════════════════════════════════
+
+const LAYER_DEFS = {
+  coast:    { api: 'coastline', spinId: 'sp-coast',    styleFn: styleCoast   },
+  rivers:   { api: 'rivers',    spinId: 'sp-rivers',   styleFn: styleRiver   },
+  terrain:  { api: 'terrain',   spinId: 'sp-terrain',  styleFn: styleTerrain },
+  biotopes: { api: 'biotopes',  spinId: 'sp-biotopes', styleFn: styleBiotope },
+  ecotones: { api: 'ecotones',  spinId: 'sp-ecotones', styleFn: styleEcotone },
+  sites:    { api: 'sites',     spinId: 'sp-sites',    styleFn: styleSite    },
+};
+
+// Pořadí vrstev (spodní → horní)
+const LAYER_ORDER = ['coast', 'terrain', 'biotopes', 'rivers', 'ecotones', 'sites'];
+
+const _layers         = {};
+const _layerEnabled   = {};
+const _abortCtrls     = {};
+
+function getBbox() {
+  const b = map.getBounds();
+  // Expand bbox slightly to avoid edge artifacts
+  const pad = 0.02;
+  return `${b.getWest() - pad},${b.getSouth() - pad},${b.getEast() + pad},${b.getNorth() + pad}`;
+}
+
+async function loadLayer(id) {
+  const def = LAYER_DEFS[id];
+  if (!def) return;
+
+  // Zruš předchozí probíhající request pro tuto vrstvu
+  if (_abortCtrls[id]) { _abortCtrls[id].abort(); delete _abortCtrls[id]; }
+
+  const ctrl = new AbortController();
+  _abortCtrls[id] = ctrl;
+
+  const spinner = document.getElementById(def.spinId);
+  spinner?.classList.add('active');
+
+  try {
+    const url = `/api/${def.api}?bbox=${getBbox()}`;
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const geojson = await res.json();
+
+    // Odstraň starou vrstvu
+    if (_layers[id]) map.removeLayer(_layers[id]);
+
+    _layers[id] = L.geoJSON(geojson, {
+      style: def.styleFn,
+      onEachFeature: (feature, layer) => {
+        layer.on('click', e => {
+          e.originalEvent?.stopPropagation();
+          try { showKBInfo(feature.properties, id); }
+          catch(err) {
+            console.error('[KB ERROR]', err);
+            document.getElementById('kb-panel').innerHTML =
+              `<div style="color:#ef4444;padding:6px;font-size:11px"><b>Chyba:</b> ${err.message}</div>`;
+          }
+        });
+        if (id === 'sites') {
+          layer.on('mouseover', e => e.target.setStyle({ weight: 3, color: '#fff' }));
+          layer.on('mouseout', e => {
+            const role = e.target.feature?.properties?.lakescape_role;
+            if (activeFilters.sites.has(role)) e.target.setStyle(styleSite(e.target.feature));
+          });
+        }
+      },
+      pointToLayer: (f, ll) => L.circleMarker(ll, { ...def.styleFn(f), radius: 7 }),
+    });
+
+    // Přidej na mapu jen pokud je vrstva stále zapnutá
+    if (_layerEnabled[id]) {
+      _layers[id].addTo(map);
+      if (id === 'terrain' || id === 'biotopes' || id === 'sites') applyFilter(id);
+      // Obnov z-order
+      LAYER_ORDER.forEach(lid => {
+        if (_layers[lid] && map.hasLayer(_layers[lid])) _layers[lid].bringToFront();
+      });
+    }
+
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    console.error(`[load] ${id}:`, err.message);
+    // Pokud jde o první load, ukaž chybu uživateli
+    if (!_layers[id]) {
+      alert(`Chyba při načítání vrstvy "${id}":\n${err.message}\n\nSpusť: python verify_visual_server.py`);
+    }
+  } finally {
+    spinner?.classList.remove('active');
+    delete _abortCtrls[id];
+  }
+}
+
+async function toggleLayer(id, enabled) {
+  _layerEnabled[id] = enabled;
+  if (enabled) {
+    await loadLayer(id);
+  } else {
+    if (_layers[id]) map.removeLayer(_layers[id]);
+  }
+}
+
+// Přímé on-change handlery pro jednoduché vrstvy (coast/rivers/ecotones)
+['coast','rivers','ecotones'].forEach(id => {
+  const cb = document.getElementById('l-' + id);
+  if (!cb) return;
+  cb.addEventListener('change', () => toggleLayer(id, cb.checked));
+  if (cb.checked) toggleLayer(id, true);
+});
+
+// On-change pro vrstvy s filtry (terrain/biotopes/sites) — volané z inline onchange
+function onLayerToggle(id, checked) {
+  toggleLayer(id, checked);
+}
+
+// ── Viewport refresh ───────────────────────────────────────
+let _reloadTimer = null;
+
+map.on('moveend', () => {
+  clearTimeout(_reloadTimer);
+  _reloadTimer = setTimeout(() => {
+    Object.entries(_layerEnabled).forEach(([id, enabled]) => {
+      if (enabled) loadLayer(id);
+    });
+  }, 400);
+});
+
+// ════════════════════════════════════════════════════════════
+//  KB INFO PANEL — sidebar rendering
+// ════════════════════════════════════════════════════════════
+
+let _lastKBProps   = null;
+let _lastKBLayerId = null;
+
+const SEASON_LABELS = { SPRING: 'Jaro', SUMMER: 'Léto', AUTUMN: 'Podzim', WINTER: 'Zima' };
+
+function seasonColor(val) {
+  if (val >= 1.4) return '#4ade80';
+  if (val >= 1.1) return '#86efac';
+  if (val >= 0.8) return '#fbbf24';
+  if (val >= 0.5) return '#f97316';
+  return '#ef4444';
+}
+
+function certBadge(cert) {
+  return cert ? `<span class="kb-cert cert-${cert}">${cert}</span>` : '';
+}
+
+function renderAttr(k, v) {
+  return `<div class="kb-attr"><span class="kb-attr-k">${k}</span><span class="kb-attr-v">${v}</span></div>`;
+}
+
+function renderSeasonal(seasonal, notes) {
+  if (!seasonal) return '';
+  return '<div class="kb-seasonal">' +
+    Object.entries(seasonal).map(([s, val]) => {
+      const barW = Math.round(Math.min(val, 2.0) / 2.0 * 100);
+      const note = notes?.[s] ? ` title="${notes[s]}"` : '';
+      return `<div class="kb-season"${note}>
+        <div class="kb-season-name">${SEASON_LABELS[s]}</div>
+        <div class="kb-season-val" style="color:${seasonColor(val)}">×${val.toFixed(1)}</div>
+        <div class="kb-season-bar" style="background:${seasonColor(val)}; width:${barW}%"></div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function renderTerrainBlock(id, tst) {
+  const res = tst.resources?.length
+    ? renderAttr('Suroviny', `<span style="color:#fbbf24">${tst.resources.join(', ')}</span>`) : '';
+  return `<div class="kb-block">
+    <div class="kb-block-hdr">⬟ Terrain <span>${id}</span></div>
+    <div class="kb-name">${tst.name}</div>
+    <div class="kb-desc">${tst.description}</div>
+    <div class="kb-attrs">
+      ${renderAttr('Hydrologie', tst.hydrology)}
+      ${renderAttr('Slope', tst.slope)}
+      ${renderAttr('Substrát', tst.substrate)}
+      ${renderAttr('Elevace', tst.elevation)}
+      ${res}
+    </div>
+    <div class="kb-source">${certBadge(tst.certainty)}${tst.source}</div>
+  </div>`;
+}
+
+function renderBiotopeBlock(id, bt) {
+  const speciesLine = bt.species?.length ? renderAttr('Druhy', bt.species.join(', ')) : '';
+  const flintLine   = bt.flint          ? renderAttr('Flint', bt.flint)               : '';
+  const scaleLine   = bt.scale          ? renderAttr('Měřítko', bt.scale)             : '';
+  const tidalLine   = bt.tidal_window_h ? renderAttr('Příliv okno', `${bt.tidal_window_h} h`) : '';
+  const threatsHtml = bt.threats?.length ? `<div class="kb-threats">⚠ ${bt.threats.join(' · ')}</div>` : '';
+  return `<div class="kb-block">
+    <div class="kb-block-hdr">◆ Biotop <span>${id}</span></div>
+    <div class="kb-name">${bt.name}</div>
+    <div class="kb-desc">${bt.description}</div>
+    <div class="kb-attrs">
+      ${renderAttr('Produktivita', `${bt.productivity} · ${(bt.kcal/1000).toFixed(0)} k kcal/km²/rok`)}
+      ${renderAttr('Průchodnost', `${bt.trafficability} (×${bt.energy_mult})`)}
+      ${speciesLine}${flintLine}${scaleLine}${tidalLine}
+    </div>
+    ${renderSeasonal(bt.seasonal, bt.seasonal_notes)}
+    ${threatsHtml}
+    <div class="kb-source">${certBadge(bt.certainty)}${bt.source}</div>
+  </div>`;
+}
+
+function renderEcotoneBlock(props) {
+  const hr = props.human_relevance;
+  const hrColor = hr === 'CRITICAL' ? '#ef4444' : hr === 'HIGH' ? '#f97316' : '#fbbf24';
+  return `<div class="kb-block">
+    <div class="kb-block-hdr">— Ekoton <span>${props.id}</span></div>
+    <div class="kb-name">${props.name || props.id}</div>
+    <div class="kb-attrs">
+      ${renderAttr('Biotop A', props.biotope_a_id)}
+      ${renderAttr('Biotop B', props.biotope_b_id)}
+      ${renderAttr('Edge effect', `×${props.edge_effect_factor}`)}
+      ${renderAttr('Relevance', `<span style="color:${hrColor}">${hr}</span>`)}
+    </div>
+    <div class="kb-source">${certBadge(props.certainty || 'INFERENCE')}${props.source || '—'}</div>
+  </div>`;
+}
+
+function renderRiverBlock(props) {
+  return `<div class="kb-block">
+    <div class="kb-block-hdr">~ Řeka <span>${props.id}</span></div>
+    ${props.name ? `<div class="kb-name">${props.name}</div>` : ''}
+    <div class="kb-attrs">
+      ${renderAttr('Permanence', props.permanence || '—')}
+      ${renderAttr('Jistota', props.certainty || '—')}
+      ${renderAttr('Zdroj', props.source || '—')}
+    </div>
+  </div>`;
+}
+
+function renderSiteBlock(props) {
+  const role   = props.lakescape_role;
+  const roleKB = KB_SITE_ROLES[role] || {};
+  const evid   = roleKB.evidence?.length
+    ? renderAttr('Evidence', roleKB.evidence.join(', ')) : '';
+  return `<div class="kb-block">
+    <div class="kb-block-hdr">★ Lokalita <span>${props.id || '—'}</span></div>
+    <div class="kb-name">${roleKB.name || role || '—'}</div>
+    ${props.name ? `<div class="kb-desc" style="color:#93c5fd">${props.name}</div>` : ''}
+    <div class="kb-desc">${roleKB.description || '—'}</div>
+    <div class="kb-attrs">
+      ${renderAttr('Role', role || '—')}
+      ${roleKB.features ? renderAttr('Charakter', roleKB.features) : ''}
+      ${evid}
+    </div>
+    <div class="kb-source">${certBadge(roleKB.certainty || props.certainty || 'INDIRECT')}${roleKB.source || props.source || '—'}</div>
+  </div>`;
+}
+
+function showKBInfo(props, layerId) {
+  if (!props) return clearInfo();
+  _lastKBProps   = props;
+  _lastKBLayerId = layerId;
+
+  const panel = document.getElementById('kb-panel');
+  let html = `<div class="kb-feat-id">${props.id || '—'}</div>`;
+
+  if (layerId === 'ecotones') {
+    html += renderEcotoneBlock(props);
+  } else if (layerId === 'rivers') {
+    html += renderRiverBlock(props);
+  } else if (layerId === 'sites') {
+    html += renderSiteBlock(props);
+  } else {
+    const tst = KB_TERRAIN[props.terrain_subtype_id];
+    const bt  = KB_BIOTOPE[props.biotope_id];
+    if (tst) html += renderTerrainBlock(props.terrain_subtype_id, tst);
+    if (tst && bt) html += '<hr class="kb-sep">';
+    if (bt)  html += renderBiotopeBlock(props.biotope_id, bt);
+    if (!tst && !bt) {
+      html += Object.entries(props)
+        .filter(([,v]) => v != null && v !== '')
+        .map(([k, v]) => renderAttr(k, v)).join('');
+    }
+  }
+
+  panel.innerHTML = html;
+  document.getElementById('kb-expand-btn').disabled = false;
+}
+
+function clearInfo() {
+  _lastKBProps = null;
+  _lastKBLayerId = null;
+  document.getElementById('kb-panel').innerHTML =
+    '<div class="kb-hint">Klikni na polygon, linii nebo lokalitu<br>pro informace z KB</div>';
+  document.getElementById('kb-expand-btn').disabled = true;
+}
+
+// ════════════════════════════════════════════════════════════
+//  KB MODAL — hierarchické karty
+// ════════════════════════════════════════════════════════════
+
+function mCard(cls, hdrText, name, desc, attrsArr, cert, src, seasonal, notes, threats) {
+  const attrsHtml = (attrsArr || [])
+    .filter(([, v]) => v != null && v !== '' && v !== '—')
+    .map(([k, v]) => `<div class="kb-attr"><span class="kb-attr-k">${k}</span><span class="kb-attr-v">${v}</span></div>`)
+    .join('');
+  const seasonHtml = seasonal ? renderSeasonal(seasonal, notes) : '';
+  const threatHtml = threats?.length ? `<div class="kb-threats" style="margin-top:6px">⚠ ${threats.join(' · ')}</div>` : '';
+  const srcHtml    = cert ? `<div class="kb-source" style="margin-top:6px">${certBadge(cert)}${src || ''}</div>` : '';
+
+  return `<div class="kb-mcard ${cls}">
+    <div class="kb-mcard-hdr">${hdrText}</div>
+    <div class="kb-mcard-name">${name}</div>
+    ${desc ? `<div class="kb-mcard-desc">${desc}</div>` : ''}
+    ${attrsHtml ? `<div class="kb-mcard-attrs">${attrsHtml}</div>` : ''}
+    ${seasonHtml}${threatHtml}${srcHtml}
+  </div>`;
+}
+
+const ARROW = '<div class="kb-mcard-arrow">→</div>';
+
+function buildModalCards(props, layerId) {
+  const parts = [];
+
+  // ── ROOT card ──────────────────────────────────────────────
+  const rootAttrs = [];
+  if (props.terrain_subtype_id) rootAttrs.push(['Terén', props.terrain_subtype_id]);
+  if (props.biotope_id)         rootAttrs.push(['Biotop', props.biotope_id]);
+  if (props.lakescape_role)     rootAttrs.push(['Role', props.lakescape_role]);
+  if (props.certainty)          rootAttrs.push(['Jistota', props.certainty]);
+  if (props.source)             rootAttrs.push(['Zdroj', props.source]);
+  if (props.status)             rootAttrs.push(['Stav', props.status]);
+
+  const layerIconMap = { terrain: '⬟', biotopes: '◆', ecotones: '—', rivers: '~', sites: '★', coast: '≈' };
+  const rootHdr = `${layerIconMap[layerId] || '·'} Feature`;
+
+  parts.push(mCard('mcard-root', rootHdr, props.id || '—', null, rootAttrs, null, null));
+
+  // ── Terrain ────────────────────────────────────────────────
+  if (layerId === 'terrain' || layerId === 'biotopes') {
+    const tst = KB_TERRAIN[props.terrain_subtype_id];
+    if (tst) {
+      parts.push(ARROW);
+      const attrs = [
+        ['Hydrologie', tst.hydrology], ['Sklon', tst.slope],
+        ['Substrát', tst.substrate], ['Elevace', tst.elevation],
+        ...(tst.resources?.length ? [['Suroviny', `<span style="color:#fbbf24">${tst.resources.join(', ')}</span>`]] : []),
+      ];
+      parts.push(mCard('', `⬟ Terrain &nbsp;<small style="opacity:.6">${props.terrain_subtype_id}</small>`,
+        tst.name, tst.description, attrs, tst.certainty, tst.source));
+    }
+
+    // ── Biotope ──────────────────────────────────────────────
+    const bt = KB_BIOTOPE[props.biotope_id];
+    if (bt) {
+      parts.push(ARROW);
+      const attrs = [
+        ['Produktivita', `${bt.productivity} · ${(bt.kcal/1000).toFixed(0)}k kcal/km²/rok`],
+        ['Průchodnost', `${bt.trafficability} (×${bt.energy_mult})`],
+        ...(bt.species?.length ? [['Druhy', bt.species.join(', ')]] : []),
+        ...(bt.flint  ? [['Flint', bt.flint]] : []),
+        ...(bt.scale  ? [['Měřítko', bt.scale]] : []),
+        ...(bt.tidal_window_h ? [['Příliv okno', `${bt.tidal_window_h} h`]] : []),
+      ];
+      parts.push(mCard('', `◆ Biotop &nbsp;<small style="opacity:.6">${props.biotope_id}</small>`,
+        bt.name, bt.description, attrs, bt.certainty, bt.source,
+        bt.seasonal, bt.seasonal_notes, bt.threats));
+    }
+
+  } else if (layerId === 'sites') {
+    // ── Site role ─────────────────────────────────────────────
+    const role   = props.lakescape_role;
+    const roleKB = KB_SITE_ROLES[role];
+    if (roleKB) {
+      parts.push(ARROW);
+      const attrs = [
+        ['Evidence', (roleKB.evidence || []).join(', ')],
+        ['Charakter', roleKB.features || '—'],
+        ...(props.name ? [['Název (ADS)', props.name]] : []),
+      ];
+      parts.push(mCard('mcard-site',
+        `★ Role &nbsp;<small style="opacity:.6">${role}</small>`,
+        roleKB.name, roleKB.description, attrs, roleKB.certainty, roleKB.source));
+    }
+
+  } else if (layerId === 'ecotones') {
+    // ── Ecotone: dva biotopy ──────────────────────────────────
+    const btA = KB_BIOTOPE[props.biotope_a_id];
+    const btB = KB_BIOTOPE[props.biotope_b_id];
+    const hr   = props.human_relevance;
+    const hrColor = hr === 'CRITICAL' ? '#ef4444' : hr === 'HIGH' ? '#f97316' : '#fbbf24';
+    const sharedAttrs = [
+      ['Edge effect', `×${props.edge_effect_factor || '—'}`],
+      ['Relevance', `<span style="color:${hrColor}">${hr || '—'}</span>`],
+    ];
+    parts.push(ARROW);
+    if (btA) {
+      const attrs = [
+        ...sharedAttrs,
+        ['Produktivita', btA.productivity],
+        ['Průchodnost', btA.trafficability],
+      ];
+      parts.push(mCard('', `◆ Biotop A &nbsp;<small style="opacity:.6">${props.biotope_a_id}</small>`,
+        btA.name, btA.description, attrs, btA.certainty, btA.source,
+        btA.seasonal, btA.seasonal_notes));
+    }
+    if (btB) {
+      parts.push(ARROW);
+      const attrs = [
+        ['Produktivita', btB.productivity],
+        ['Průchodnost', btB.trafficability],
+      ];
+      parts.push(mCard('', `◆ Biotop B &nbsp;<small style="opacity:.6">${props.biotope_b_id}</small>`,
+        btB.name, btB.description, attrs, btB.certainty, btB.source,
+        btB.seasonal, btB.seasonal_notes));
+    }
+
+  } else if (layerId === 'rivers') {
+    parts.push(ARROW);
+    const attrs = [
+      ['Permanence', props.permanence || '—'],
+      ...(props.name ? [['Název', props.name]] : []),
+    ];
+    parts.push(mCard('', '~ Řeka', props.name || props.id || '—', null, attrs,
+      props.certainty, props.source));
+  }
+
+  return parts.join('');
+}
+
+function expandKBModal() {
+  if (!_lastKBProps) return;
+  const modal = document.getElementById('kb-modal');
+  const body  = document.getElementById('kb-modal-body');
+  const title = document.getElementById('kb-modal-title');
+
+  title.textContent = _lastKBProps.id || '—';
+  body.innerHTML    = buildModalCards(_lastKBProps, _lastKBLayerId);
+  modal.style.display = 'flex';
+}
+
+function closeKBModal() {
+  document.getElementById('kb-modal').style.display = 'none';
+}
+
+function onModalBgClick(e) {
+  if (e.target === document.getElementById('kb-modal')) closeKBModal();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeKBModal();
+});
+
+// ════════════════════════════════════════════════════════════
+//  SIDEBAR — COLLAPSIBLE SECTIONS
+// ════════════════════════════════════════════════════════════
+
+function toggleSec(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+function toggleLyrFlt(id) {
+  document.getElementById(id).classList.toggle('flt-open');
+}
+
+// ════════════════════════════════════════════════════════════
+//  BOOKMARKS
+// ════════════════════════════════════════════════════════════
+
+const VIEWS = {
+  overview: { center: [54.10, -1.30], zoom: 8  },
+  coast:    { center: [53.65,  0.10], zoom: 9  },
+  terrain:  { center: [54.05, -1.70], zoom: 9  },
+  starcarr: { center: [54.214, -0.403], zoom: 13 },
+  rivers:   { center: [53.88, -1.10], zoom: 10 },
+};
+
+function flyTo(key) {
+  const v = VIEWS[key];
+  if (v) map.flyTo(v.center, v.zoom, { duration: 1.0, easeLinearity: 0.5 });
+}
+
+// ════════════════════════════════════════════════════════════
+//  STAR CARR MARKER
+// ════════════════════════════════════════════════════════════
+
+L.marker([54.214, -0.403], {
+  icon: L.divIcon({
+    html: '<div style="background:#fbbf24;border:2px solid #92400e;width:10px;height:10px;border-radius:50%;box-shadow:0 0 6px rgba(251,191,36,0.7)"></div>',
+    iconSize: [10, 10], iconAnchor: [5, 5], className: '',
+  }),
+}).addTo(map).bindTooltip('★ Star Carr (54.214°N, 0.403°W)', { direction: 'top' });
+
+// ════════════════════════════════════════════════════════════
+//  COORDINATES
+// ════════════════════════════════════════════════════════════
+
+map.on('mousemove', ({ latlng: { lat, lng } }) => {
+  document.getElementById('coords').textContent =
+    `${lat.toFixed(5)}°N  ${lng >= 0 ? lng.toFixed(5)+'°E' : (-lng).toFixed(5)+'°W'}  z${map.getZoom()}`;
+});
+</script>
+</body>
+</html>

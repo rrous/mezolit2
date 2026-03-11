@@ -1,0 +1,33 @@
+# ── Secrets ──────────────────────────────────────────────────
+.env
+*.env.local
+
+# ── Raw source data (velké / re-downloadable soubory) ────────
+data/raw/dem/
+data/raw/rivers/
+data/raw/gebco/
+yorkshire_dem.tif
+
+# ── Local tooling ─────────────────────────────────────────────
+.claude/
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── Node / Frontend ──────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+node_modules/
+.vite/
+dist/
+
+# ── OS / IDE ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

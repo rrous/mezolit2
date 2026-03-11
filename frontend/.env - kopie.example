@@ -1,0 +1,5 @@
+# Zkopírovat jako .env a doplnit hodnoty ze Supabase dashboard:
+# Project Settings → API → Project API keys
+
+VITE_SUPABASE_URL=https://osgaikufcwblejnljgbi.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon public key ze Supabase dashboardu>

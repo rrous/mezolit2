@@ -1,0 +1,229 @@
+{
+  "schema_version": "0.2",
+  "description": "Vocabulary — definice povolených hodnot. Každá hodnota má přesnou definici a anotaci ve které vrstvě KB je použita.",
+  "note": "Enums slouží primárně vědeckému popisu a zobrazování. Model v1 funguje na graph traversal a quality_modifier — enums nejsou pro runtime nutné. Anotace 'used_in_layers' říká kde enum figuruje jako atribut.",
+
+  "vocabulary": {
+
+    "slope": {
+      "description": "Sklon terénu. Měřeno ve stupních od horizontály.",
+      "used_in_layers": ["TERRAIN_SUBTYPE — key_attributes (vědecký popis)", "zobrazování (vliv na průchodnost)"],
+      "functional_relevance": "Nepřímo — slope ovlivňuje hydrology a substrate, které rozhodují o can_host. V modelu v1 není slope přímý vstup graph traversal.",
+      "values": {
+        "flat": { "range_degrees": { "max": 0.5 }, "examples": "dno jezerní pánve, rašeliniště" },
+        "very_low": { "range_degrees": { "min": 0.5, "max": 2 }, "examples": "říční niva, okraje mokřadů" },
+        "low": { "range_degrees": { "min": 2, "max": 5 }, "examples": "okraje niv, spodní svahy" },
+        "moderate": { "range_degrees": { "min": 5, "max": 15 }, "examples": "kopce, plošiny" },
+        "steep": { "range_degrees": { "min": 15, "max": 35 }, "examples": "skalní svahy, křídové útesy" },
+        "very_steep": { "range_degrees": { "min": 35 }, "examples": "mořské útesy, skalní výchozy" },
+        "low_to_moderate": { "range_degrees": { "min": 2, "max": 15 }, "examples": "křídové plošiny — kombinace plochých partií a svahů" },
+        "low_to_steep": { "range_degrees": { "min": 2, "max": 35 }, "examples": "vrchovinné pánve — ploché vrcholy + strmé svahy" }
+      }
+    },
+
+    "hydrology": {
+      "description": "Hydrologický režim — jak a kdy je plocha ovlivněna vodou.",
+      "used_in_layers": ["TERRAIN_SUBTYPE — key_attributes (vědecký popis, primárně)", "PLACEMENT_RULE podmínky (historické — v04 zrušeno, nyní kódováno v can_host)"],
+      "functional_relevance": "Historicky klíčový parametr rule enginu. V graph modelu (v04) je hydrology součástí vědeckého popisu terrain_subtype — klient ho může použít pro heuristiku ale není nutný pro traversal.",
+      "values": {
+        "permanent_standing_water": { "definition": "Stálá otevřená vodní plocha celý rok.", "examples": "Lake Flixton, rybník" },
+        "permanent_flow": { "definition": "Tekoucí voda celý rok. Průtok kolísá ale tok nevysychá.", "examples": "Thames, Trent" },
+        "seasonal_flow": { "definition": "Tok jen část roku — vysychá v létě nebo na podzim.", "examples": "křídové potoky" },
+        "seasonal_flooding": { "definition": "Pravidelné záplavy — typicky jaro. Mimo záplavu suchá nebo vlhká.", "flood_duration_weeks": { "typical": "2–8" }, "examples": "říční niva" },
+        "high_water_table": { "definition": "Podzemní voda blízko povrchu celý rok. Vlhký povrch bez zaplavení.", "examples": "fenland, slatiniště" },
+        "permanent_saturation": { "definition": "Půda trvale nasycená. Anaerobie — rašelina se hromadí.", "examples": "hluboká rašeliniště" },
+        "riparian_moisture": { "definition": "Zvýšená vlhkost podél toku bez záplavy. Kapilární vzlínání.", "examples": "okraje lužního lesa" },
+        "moderate_moisture": { "definition": "Střední vlhkost. Srážky nad evapotranspirací, rychlý odtok.", "examples": "planární boreální les" },
+        "well_drained": { "definition": "Rychlý odtok. Půda schnout rychle. Propustný substrát.", "examples": "vápencová plošina, křída" },
+        "waterlogged_summit": { "definition": "Voda se hromadí na vrcholu pro nepropustný substrát nebo permafrost.", "examples": "vrcholky Pennin" },
+        "tidal_inundation": { "definition": "Přílivový cyklus — dvakrát denně. Slaná nebo brakická voda.", "cycle_hours": 12.4, "examples": "přílivové plochy" },
+        "tidal_to_brackish": { "definition": "Přechodná zóna — slaná voda mísí se sladkou. Proměnlivá salinita.", "examples": "estuáry, laguny" }
+      }
+    },
+
+    "substrate": {
+      "description": "Typ půdy nebo geologického podkladu. Ovlivňuje hydrologický režim, vegetaci a dostupnost surovin.",
+      "used_in_layers": ["TERRAIN_SUBTYPE — key_attributes (vědecký popis)", "TERRAIN_SUBTYPE — nonrenewable_resources (funkčně důležité pro suroviny)"],
+      "functional_relevance": "nonrenewable_resources na terrain_subtype jsou funkčně důležité (flint = neobnovitelná surovina). Ostatní substrate atributy jsou vědecký popis.",
+      "values": {
+        "organic_lacustrine_sediment": { "origin": "jezerní sedimentace", "bearing_capacity": "VERY_LOW", "nutrient_level": "HIGH" },
+        "alluvial_clay_peat": { "origin": "říční sedimentace", "bearing_capacity": "LOW", "nutrient_level": "HIGH" },
+        "peat": { "ph": { "typical": "3.5–5.5" }, "bearing_capacity": "VERY_LOW" },
+        "blanket_peat_forming": { "note": "~6200 BCE teprve vzniká — hloubka max 0.5 m", "bearing_capacity": "VERY_LOW" },
+        "limestone_sandstone": { "permeability": "HIGH", "flint_availability": "LOW" },
+        "chalk_rendzina": { "ph": { "typical": "7.5–8.5" }, "permeability": "VERY_HIGH", "flint_availability": "HIGH" },
+        "glacial_till": { "permeability": "LOW", "nutrient_level": "MEDIUM" },
+        "brown_earth": { "ph": { "typical": "5.5–7.0" }, "nutrient_level": "MEDIUM_TO_HIGH" },
+        "tidal_mud_sand": { "bearing_capacity": "VERY_LOW", "nutrient_level": "HIGH", "bivalve_habitat": true },
+        "marine_sand_gravel": { "bearing_capacity": "MEDIUM" },
+        "river_gravel": { "permeability": "VERY_HIGH", "bearing_capacity": "HIGH" },
+        "thin_peat_or_rock": { "depth_cm": { "max": 20 }, "nutrient_level": "VERY_LOW" },
+        "exposed_rock": { "bearing_capacity": "VERY_HIGH" },
+        "granite_slate_sandstone": { "ph": { "typical": "4.5–6.0" }, "flint_availability": "NONE" },
+        "limestone_thin_soil": { "ph": { "typical": "7.0–8.0" }, "flint_availability": "NONE_TO_LOW" }
+      }
+    },
+
+    "flint_availability": {
+      "description": "Dostupnost flintů na povrchu. Klíčová NEOBNOVITELNÁ surovina — terrain je zásobárna, sběrem se nevyčerpá ale koncentrace klesá s intenzitou využívání.",
+      "used_in_layers": ["TERRAIN_SUBTYPE — nonrenewable_resources (funkčně)", "BIOTOPE — atribut (křídový skrub, vědecký popis)"],
+      "functional_relevance": "VYSOKÁ — simulace potřebuje vědět kde je flint. Neobnovitelný zdroj terrain_subtype → klient modeluje depleci.",
+      "values": {
+        "HIGH": { "definition": "Flint hojný na povrchu. Sbírání ze země bez těžby." },
+        "MEDIUM": { "definition": "Flint přítomen. Nutné prohledávání." },
+        "LOW": { "definition": "Flint vzácný. Nutné přímé doklady nebo obchod." },
+        "NONE": { "definition": "Žádný flint. Alternativy: křemen, obsidián, kost." },
+        "NONE_TO_LOW": { "definition": "Výjimečně — nespolehlivý zdroj." }
+      }
+    },
+
+    "trafficability": {
+      "description": "Průchodnost biotopu pro člověka pěšky. Ovlivňuje energetické náklady pohybu.",
+      "used_in_layers": ["BIOTOPE — atributy (funkčně důležité)", "zobrazování"],
+      "functional_relevance": "VYSOKÁ — energy_multiplier je přímý vstup pro kalorické modelování pohybu skupiny.",
+      "values": {
+        "VERY_LOW": { "definition": "Téměř nepřekonatelné. Bažina, hluboká voda.", "energy_multiplier": 3.0 },
+        "LOW": { "definition": "Obtížný pohyb. Nutné stezky nebo platformy.", "energy_multiplier": 2.0 },
+        "LOW_TO_MEDIUM": { "definition": "Pohyb při odlivu nebo po zmrznutí.", "energy_multiplier": 1.5 },
+        "MEDIUM": { "definition": "Pohyb možný, namáhavý. Hustý podrost.", "energy_multiplier": 1.3 },
+        "MEDIUM_HIGH": { "definition": "Relativně snadný. Otevřený les, mírný sklon.", "energy_multiplier": 1.1 },
+        "HIGH": { "definition": "Snadný pohyb. Otevřená krajina, pevný povrch.", "energy_multiplier": 1.0 }
+      }
+    },
+
+    "productivity_class": {
+      "description": "Hrubá kategorie primární produktivity. Vstup pro kalorické modelování.",
+      "used_in_layers": ["BIOTOPE — atributy (funkčně)"],
+      "functional_relevance": "VYSOKÁ — hrubý odhad pro klienta pokud nemá přesné kcal_km2_year.",
+      "values": {
+        "VERY_HIGH": { "kcal_km2_year_approx": { "min": 1000000 }, "examples": "mokřad" },
+        "HIGH": { "kcal_km2_year_approx": { "min": 600000, "max": 1000000 }, "examples": "jezero, slanisko, lužní les" },
+        "MEDIUM_TO_HIGH": { "kcal_km2_year_approx": { "min": 400000, "max": 700000 }, "examples": "palouk, přílivová zóna" },
+        "MEDIUM": { "kcal_km2_year_approx": { "min": 200000, "max": 500000 }, "examples": "boreální les" },
+        "LOW_TO_MEDIUM": { "kcal_km2_year_approx": { "min": 100000, "max": 300000 }, "examples": "křídový skrub" },
+        "LOW": { "kcal_km2_year_approx": { "max": 200000 }, "examples": "otevřená vrchovinná krajina" }
+      }
+    },
+
+    "spatial_scale": {
+      "description": "Prostorová granularita biotopu nebo can_host hrany.",
+      "used_in_layers": ["BIOTOPE — can_host hrany (funkčně)", "ECOTONE — atributy (micro ekotony)"],
+      "functional_relevance": "STŘEDNÍ — klient použije pro rozlišení dominantního biotopu od patchů a micro prvků při generování mapy.",
+      "values": {
+        "landscape": { "definition": "Dominantní biotop oblasti.", "scale_km2": { "typical": "> 10" } },
+        "local": { "definition": "Patch uvnitř landscape.", "scale_km2": { "typical": "0.01–10" } },
+        "micro": { "definition": "Malý prvek.", "scale_m2": { "typical": "10–10000" } }
+      }
+    },
+
+    "trigger": {
+      "description": "Spouštěč — kdy simulace aplikuje can_host hranu.",
+      "used_in_layers": ["BIOTOPE — can_host hrany (funkčně klíčové)"],
+      "functional_relevance": "VYSOKÁ — rozlišuje baseline snapshot od event-driven změn.",
+      "values": {
+        "baseline": { "definition": "Součást snapshotu 6200 BCE. Aplikuje se při generování počáteční mapy." },
+        "event_fire": { "definition": "Pouze při požáru (přirozený nebo antropogenní)." },
+        "event_flood": { "definition": "Při mimořádné povodni nad rámec seasonal_flooding." },
+        "event_drought": { "definition": "Při víceletém suchu (min 3 roky)." },
+        "event_storm": { "definition": "Při bouři nebo Storegga-type eventu." },
+        "event_beaver_dam": { "definition": "Bobr postaví hráz — lokální změna hydrologie." }
+      }
+    },
+
+    "human_relevance": {
+      "description": "Důležitost biotopu nebo ekotonu pro přežití skupiny.",
+      "used_in_layers": ["ECOTONE — atributy (vědecký popis, zobrazování)"],
+      "functional_relevance": "NÍZKÁ pro model — spíše pro zobrazování a vědecký popis. Model počítá s productivity_class a energy_multiplier.",
+      "values": {
+        "CRITICAL": { "definition": "Bez přístupu skupina pravděpodobně nepřežije sezónu." },
+        "HIGH": { "definition": "Výrazně zvyšuje šanci přežití." },
+        "MEDIUM": { "definition": "Přínosný ale nahraditelný." },
+        "LOW": { "definition": "Marginální přínos." }
+      }
+    },
+
+    "certainty": {
+      "description": "Epistemická jistota záznamu.",
+      "used_in_layers": ["všechny uzly a hrany — epistemics.certainty (vědecká integrita, verzování)"],
+      "functional_relevance": "STŘEDNÍ — klient může filtrovat záznamy dle certainty. API vrací certainty jako součást odpovědi.",
+      "values": {
+        "DIRECT": { "definition": "Přímý archeologický nebo geologický nález." },
+        "INDIRECT": { "definition": "Odvozeno z nepřímých dat — pyly, fauna, analogie." },
+        "INFERENCE": { "definition": "Logický závěr z teorie a analogií." },
+        "SPECULATION": { "definition": "Pracovní hypotéza bez přímé opory." }
+      }
+    },
+
+    "status": {
+      "description": "Vědecký stav záznamu.",
+      "used_in_layers": ["všechny uzly — epistemics.status (vědecká integrita, verzování)"],
+      "functional_relevance": "STŘEDNÍ — klient by měl ignorovat REFUTED záznamy. DISPUTED = použít s varováním.",
+      "values": {
+        "VALID": { "definition": "Aktuálně přijatý poznatek." },
+        "REVISED": { "definition": "Nahrazen — superseded_by obsahuje odkaz." },
+        "DISPUTED": { "definition": "Vědecká debata otevřená." },
+        "REFUTED": { "definition": "Odmítnutý — důvod v revision_note." },
+        "HYPOTHESIS": { "definition": "Pracovní hypotéza." }
+      }
+    },
+
+    "permanence": {
+      "description": "Trvalost vodního toku.",
+      "used_in_layers": ["TERRAIN_SUBTYPE — key_attributes (řeky, funkčně)"],
+      "functional_relevance": "STŘEDNÍ — důležité pro modelování dostupnosti vody při event_drought.",
+      "values": {
+        "permanent": { "definition": "Tok celý rok. Vyschne jen při extrémním suchu." },
+        "seasonal": { "definition": "Tok část roku. Typicky jaro/léto." },
+        "ephemeral": { "definition": "Tok jen krátce po srážkách. Dny až týdny." },
+        "reconstructed": { "definition": "Rekonstruovaný tok na základě geomorfologie. Moderní průběh nemusí odpovídat mezolitickému." }
+      }
+    },
+
+    "season": {
+      "description": "Sezóna pro query_dimensions a seasonal_modifiers.",
+      "used_in_layers": ["BIOTOPE — seasonal_modifiers (funkčně klíčové)", "fauna — seasonal_modifiers (budoucí vrstvy)"],
+      "functional_relevance": "VYSOKÁ — přímý vstup klientského query.",
+      "values": {
+        "SPRING": { "months_approx": "březen–květen" },
+        "SUMMER": { "months_approx": "červen–srpen" },
+        "AUTUMN": { "months_approx": "září–listopad" },
+        "WINTER": { "months_approx": "prosinec–únor" },
+        "YEAR_ROUND": { "note": "Platí po celý rok." }
+      }
+    },
+
+    "salinity": {
+      "description": "Salinita vodního prostředí.",
+      "used_in_layers": ["BIOTOPE — atributy (pobřežní biotopy, vědecký popis)"],
+      "functional_relevance": "NÍZKÁ — popisný atribut pro rozlišení sladkovodních a mořských biotopů.",
+      "values": {
+        "freshwater": { "definition": "Sladká voda. <0.5 ppt." },
+        "brackish": { "definition": "Brakická voda. 0.5–30 ppt. Estuáry a laguny." },
+        "brackish_to_marine": { "definition": "Přechodná zóna. 15–35 ppt. Otevřené estuáry." },
+        "marine": { "definition": "Mořská voda. >30 ppt." }
+      }
+    },
+
+    "anchor_site": {
+      "description": "Boolean — přímý doklad existence konkrétní terrain feature instance.",
+      "used_in_layers": ["TERRAIN_FEATURE — anchor_site flag (PoC DB schema)", "TERRAIN_SUBTYPE — anchor_instances (vědecká integrita)"],
+      "functional_relevance": "NÍZKÁ pro model — důležité pro vědeckou validaci a prioritizaci seed dat.",
+      "values": {
+        "true": { "definition": "Přímý doklad. Source musí uvádět referenci." },
+        "false": { "definition": "Inference nebo analogie." }
+      }
+    },
+
+    "lakescape_role": {
+      "description": "Role archeologické lokality v jezerní krajině (Lake Flixton lakescape).",
+      "used_in_layers": ["SITE_INSTANCE"],
+      "functional_relevance": "Klasifikace funkce lokality v rámci settlement pattern kolem jezera. Zdroj: Milner et al. 2018.",
+      "values": {
+        "primary_camp": { "definition": "Hlavní obytný tábor. Dlouhodobé osídlení, rozmanitý nálezový soubor." },
+        "island_site": { "definition": "Lokalita na ostrově v jezeře. Specializovaná funkce." },
+        "shore_camp": { "definition": "Tábor na břehu jezera. Krátkodobé nebo sezónní." },
+        "find_scatter": { "definition": "Rozptyl nálezů bez zřejmé struktury. Průchod nebo krátkodobá aktivita." }
+      }
+    }
+  }
+}
