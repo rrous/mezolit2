@@ -184,25 +184,27 @@ function biotopeLegendRows(visibleSet) {
     ).join('')
 }
 
-// Map CERTAINTY_DASH (SVG dashArray) → CSS border-style for the legend icon
-const CERT_BORDER_STYLE = {
-  DIRECT:      'solid',
-  INDIRECT:    'dashed',
-  INFERENCE:   'dotted',
-  SPECULATION: 'dashed'
+// Certainty → legend line style (must match CERT_BORDER in layers.js)
+const CERT_LEGEND = {
+  DIRECT:      { color: '#ffffff', style: 'solid' },
+  INDIRECT:    { color: '#e9c46a', style: 'dashed' },
+  INFERENCE:   { color: '#f4a261', style: 'dotted' },
+  SPECULATION: { color: '#e63946', style: 'solid' }
 }
 
 function certaintyLegendRows() {
-  return ['DIRECT', 'INDIRECT', 'INFERENCE', 'SPECULATION'].map(cert =>
-    `<div class="legend-row">
+  return ['DIRECT', 'INDIRECT', 'INFERENCE', 'SPECULATION'].map(cert => {
+    const { color, style } = CERT_LEGEND[cert]
+    return `<div class="legend-row">
       <span class="legend-cert" style="
-        border-top-style:${CERT_BORDER_STYLE[cert] ?? 'solid'};
-        border-top-color:${CERTAINTY_COLOR[cert]};
-        opacity:${CERTAINTY_OPACITY[cert] ?? 0.7}
+        border-top-style:${style};
+        border-top-color:${color};
+        border-top-width:2px;
+        opacity:${CERTAINTY_OPACITY[cert] ?? 0.85}
       "></span>
       <span>${certLabel(cert)}</span>
     </div>`
-  ).join('')
+  }).join('')
 }
 
 function certLabel(cert) {

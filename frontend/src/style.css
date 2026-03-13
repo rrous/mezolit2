@@ -148,6 +148,27 @@ html, body, #app {
   font-weight: 700;
 }
 
+/* Ecotone toggle button */
+.toggle-btn {
+  padding: 3px 9px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #aab;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.toggle-btn:hover { background: #0f3460; color: #e8e8e8; }
+.toggle-btn.active {
+  background: #f4a261;
+  color: #1a1a2e;
+  border-color: #f4a261;
+  font-weight: 700;
+}
+
 /* Color mode buttons */
 #color-mode-btns {
   display: flex;

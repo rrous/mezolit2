@@ -24,6 +24,20 @@ let currentSeason = null
 // Current terrain color mode: 'biotope' | 'subtype'
 let currentColorMode = 'biotope'
 
+// Whether ecotones are currently visible — drives terrain border style
+let _ecotonessVisible = true
+
+// Certainty → polygon border when ecotones are OFF (certainty mode)
+const CERT_BORDER = {
+  DIRECT:      { color: '#ffffff', weight: 2.5, opacity: 0.95 },
+  INDIRECT:    { color: '#e9c46a', weight: 2,   opacity: 0.90 },
+  INFERENCE:   { color: '#f4a261', weight: 2,   opacity: 0.85 },
+  SPECULATION: { color: '#e63946', weight: 2,   opacity: 0.80 },
+  _default:    { color: 'rgba(255,255,255,0.4)', weight: 1,   opacity: 0.6 }
+}
+// Subtle border when ecotones are ON (polygon separation only, no distraction)
+const BORDER_SUBTLE = { color: 'rgba(255,255,255,0.2)', weight: 0.5, opacity: 0.4 }
+
 // Debounce handle for viewport changes
 let _refreshTimer = null
 
@@ -42,7 +56,12 @@ function clearHoverInfo() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 export async function initLayers(map) {
-  Object.values(layerGroups).forEach(g => g.addTo(map))
+  // Z-order: coastline → terrain → rivers → sites → ecotones (on top of everything)
+  layerGroups.coastline.addTo(map)
+  layerGroups.terrain.addTo(map)
+  layerGroups.rivers.addTo(map)
+  layerGroups.sites.addTo(map)
+  layerGroups.ecotones.addTo(map)
 
   setLoading(true)
   try {
@@ -239,6 +258,11 @@ export function setSeason(season) {
   _restyleTerrainLayers()
 }
 
+export function setEcotonesVisible(visible) {
+  _ecotonessVisible = visible
+  _restyleTerrainLayers()
+}
+
 export function setTerrainColorMode(mode) {
   currentColorMode = mode
   _restyleTerrainLayers()
@@ -286,13 +310,18 @@ function terrainStyle(props, season) {
     fillOpacity = Math.min(0.95, Math.max(0.10, baseOpacity * mod))
   }
 
-  // Certainty: white border + dash pattern — visible on any fill colour
+  // When ecotones are visible: subtle separator only (ecotone lines carry the scientific info)
+  // When ecotones are hidden: full colored certainty borders
+  const border = _ecotonessVisible
+    ? BORDER_SUBTLE
+    : (CERT_BORDER[props.certainty] ?? CERT_BORDER._default)
   return {
     fillColor:   color,
     fillOpacity: fillOpacity,
-    color:       'rgba(255,255,255,0.65)',
-    weight:      1.5,
-    dashArray:   CERTAINTY_DASH[props.certainty] ?? null
+    color:       border.color,
+    weight:      border.weight,
+    opacity:     border.opacity,
+    dashArray:   _ecotonessVisible ? null : (CERTAINTY_DASH[props.certainty] ?? null)
   }
 }
 

@@ -1,12 +1,12 @@
-// ── Filters: season buttons + view mode + basemap + URL hash state ────────────
+// ── Filters: season buttons + ecotone toggle + basemap + URL hash state ───────
 
-import { setSeason, layerGroups, forceRefresh, setTerrainColorMode } from './layers.js'
-import { setBasemap, updateLegend }                                   from './map.js'
+import { setSeason, layerGroups, setTerrainColorMode, setEcotonesVisible } from './layers.js'
+import { setBasemap }                                  from './map.js'
 
 export function initFilters(map) {
   initSeasonButtons()
-  initViewModeButtons()
   initColorModeButtons()
+  initEcotoneToggle()
   initBasemapButtons()
   initInfoModal()
   initFullscreen()
@@ -27,50 +27,20 @@ function initSeasonButtons() {
   })
 }
 
-// ── View mode buttons ─────────────────────────────────────────────────────────
-// Controls which layer groups are visible
+// ── Ecotone toggle ────────────────────────────────────────────────────────────
 
-const VIEW_MODES = {
-  all:      { terrain: true,  rivers: true,  ecotones: true,  sites: true,  coastline: true  },
-  biotopes: { terrain: true,  rivers: false, ecotones: true,  sites: false, coastline: true  },
-  terrain:  { terrain: true,  rivers: true,  ecotones: false, sites: false, coastline: true  },
-  sites:    { terrain: false, rivers: false, ecotones: false, sites: true,  coastline: false }
-}
-
-function setViewMode(modeName) {
-  const mode = VIEW_MODES[modeName] ?? VIEW_MODES.all
-  let anyReEnabled = false
-
-  Object.entries(mode).forEach(([name, visible]) => {
-    const group = layerGroups[name]
-    if (!group) return
-    const wasOnMap = !!group._map
-    if (visible && !wasOnMap) {
-      group.addTo(window._map)
-      anyReEnabled = true
-    } else if (!visible && wasOnMap) {
-      group.remove()
+function initEcotoneToggle() {
+  const btn = document.getElementById('ecotone-toggle')
+  if (!btn) return
+  btn.addEventListener('click', () => {
+    const nowActive = btn.classList.toggle('active')
+    setEcotonesVisible(nowActive)
+    if (nowActive) {
+      layerGroups.ecotones.addTo(window._map)
+      window._map.fire('moveend')  // reload data for current viewport
+    } else {
+      layerGroups.ecotones.remove()
     }
-  })
-
-  // Hide terrain/biotope entries from legend when terrain is hidden
-  if (!mode.terrain) updateLegend({ biotopes: [], terrainSubtypes: [] })
-  // Hide site entries from legend when sites are hidden
-  if (!mode.sites)   updateLegend({ siteRoles: [] })
-
-  // If any previously-hidden dynamic layers are re-enabled, reload data for current viewport
-  if (anyReEnabled && window._map) {
-    window._map.fire('moveend')
-  }
-}
-
-function initViewModeButtons() {
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'))
-      btn.classList.add('active')
-      setViewMode(btn.dataset.view)
-    })
   })
 }
 

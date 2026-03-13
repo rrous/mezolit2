@@ -29,17 +29,6 @@
           </div>
         </div>
 
-        <!-- View mode (replaces individual layer checkboxes) -->
-        <div class="control-group" id="view-mode-group">
-          <span class="control-label">View</span>
-          <div id="view-mode-btns">
-            <button class="view-btn active" data-view="all"      title="All layers">All</button>
-            <button class="view-btn"        data-view="biotopes"  title="Biotopes + ecotones">Biotopes</button>
-            <button class="view-btn"        data-view="terrain"   title="Terrain + rivers">Terrain</button>
-            <button class="view-btn"        data-view="sites"     title="Archaeological sites only">Sites only</button>
-          </div>
-        </div>
-
         <!-- Terrain color mode -->
         <div class="control-group" id="color-mode-group">
           <span class="control-label">Color by</span>
@@ -47,6 +36,12 @@
             <button class="color-btn active" data-color="biotope" title="Color polygons by biotope type">Biotope</button>
             <button class="color-btn"        data-color="subtype" title="Color polygons by terrain subtype">Terrain</button>
           </div>
+        </div>
+
+        <!-- Ecotone toggle -->
+        <div class="control-group" id="ecotone-group">
+          <span class="control-label">Ekotony</span>
+          <button id="ecotone-toggle" class="toggle-btn active" title="Skrýt ekotony = zobrazit vědeckou přesnost hranic">Zobrazit</button>
         </div>
 
         <!-- Basemap selector -->
@@ -109,12 +104,10 @@
         <li><strong>Archaeological sites:</strong> ADS — Taylor &amp; Alison 2018</li>
       </ul>
 
-      <h3>View modes</h3>
+      <h3>Controls</h3>
       <ul>
-        <li><strong>All</strong> — terrain + rivers + ecotones + sites + coastline</li>
-        <li><strong>Biotopes</strong> — biotope colors + ecotone transitions</li>
-        <li><strong>Terrain</strong> — topography + river network</li>
-        <li><strong>Sites only</strong> — archaeological sites only</li>
+        <li><strong>Color by Biotope/Terrain</strong> — switch polygon coloring between biotope types and terrain subtypes</li>
+        <li><strong>Ekotony</strong> — toggle ecotone boundaries; hiding them reveals certainty borders on terrain polygons</li>
       </ul>
 
       <h3>Certainty levels</h3>
