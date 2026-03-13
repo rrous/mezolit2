@@ -1,5 +1,6 @@
 {
+  "framework": null,
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "echo 'deps handled in buildCommand'"
+  "installCommand": "echo skip"
 }
