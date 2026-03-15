@@ -352,7 +352,7 @@ python 04_terrain.py
 **Key constants:**
 - [`L35–L38`](https://github.com/rrous/mezolit2/blob/master/pipeline/04_terrain.py#L35): Yorkshire bbox
 - [`L43–L47`](https://github.com/rrous/mezolit2/blob/master/pipeline/04_terrain.py#L43): Star Carr coordinates (54.214°N, -0.403°W)
-- [`L54–L75`](https://github.com/rrous/mezolit2/blob/master/pipeline/04_terrain.py#L54): Site-to-lakescape-role mapping (20 ADS sites)
+- [`L52–L75`](https://github.com/rrous/mezolit2/blob/master/pipeline/04_terrain.py#L52): Site-to-lakescape-role mapping (20 ADS sites)
 - [`L77–L80`](https://github.com/rrous/mezolit2/blob/master/pipeline/04_terrain.py#L77): Wolds chalk detection parameters
 
 **Classification logic:**
@@ -386,7 +386,7 @@ python 05_kb_rules.py
   - `data/processed/terrain_features_with_biotopes.geojson`
   - `data/processed/ecotones.geojson`
 
-**CAN_HOST traversal** ([`L37–L60`](https://github.com/rrous/mezolit2/blob/master/pipeline/05_kb_rules.py#L37)):
+**CAN_HOST traversal** ([`L37–L75`](https://github.com/rrous/mezolit2/blob/master/pipeline/05_kb_rules.py#L37)):
 ```
 For each terrain polygon:
   1. Find all biotopes where can_host[].terrain_subtype = this polygon's tst_id
@@ -417,7 +417,7 @@ python 06_import_supabase.py
   - `coastline` — reconstructed coastline
   - `site_instances` — 20 archaeological sites
 
-**Key behaviors** ([`L44–L50`](https://github.com/rrous/mezolit2/blob/master/pipeline/06_import_supabase.py#L44)):
+**Key behaviors** ([`L44–L51`](https://github.com/rrous/mezolit2/blob/master/pipeline/06_import_supabase.py#L44)):
 - Clears dependent tables before re-import (FK cascade: `DELETE FROM site_instances` first)
 - Normalizes MultiPolygon → Polygon for `terrain_features` (schema requires POLYGON)
 - Uses `ST_GeomFromGeoJSON()` for geometry insertion
@@ -477,11 +477,11 @@ npm run build        # outputs to frontend/dist/
 |------|-------|---------|
 | [`src/main.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/main.js) | 33 | App boot: `initMap → initPanel → initLayers → initFilters` |
 | [`src/config.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/config.js) | 94 | All constants: colors, coordinates, enums |
-| [`src/map.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/map.js) | — | Leaflet init, basemap switcher, legend |
-| [`src/layers.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/layers.js) | — | Layer groups, viewport-based data loading, styling |
-| [`src/panel.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/panel.js) | — | Click panel (right sidebar, full KB record) |
-| [`src/filters.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/filters.js) | — | Season/certainty filters, URL hash persistence |
-| [`src/api.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/api.js) | — | Supabase REST calls (`fetchTerrain`, `fetchRivers`, etc.) |
+| [`src/map.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/map.js) | 224 | Leaflet init, basemap switcher, legend |
+| [`src/layers.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/layers.js) | 379 | Layer groups, viewport-based data loading, styling |
+| [`src/panel.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/panel.js) | 195 | Click panel (right sidebar, full KB record) |
+| [`src/filters.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/filters.js) | 133 | Season/certainty filters, URL hash persistence |
+| [`src/api.js`](https://github.com/rrous/mezolit2/blob/master/frontend/src/api.js) | 55 | Supabase REST calls (`fetchTerrain`, `fetchRivers`, etc.) |
 
 ### Biotope colors
 [`frontend/src/config.js L12–L25`](https://github.com/rrous/mezolit2/blob/master/frontend/src/config.js#L12)
@@ -731,7 +731,7 @@ python 02_download_dem.py
 cat frontend/.env
 # Should contain VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 ```
-See [`frontend/src/main.js L27–L31`](https://github.com/rrous/mezolit2/blob/master/frontend/src/main.js#L27) for the error handler.
+See [`frontend/src/main.js L23–L32`](https://github.com/rrous/mezolit2/blob/master/frontend/src/main.js#L23) for the error handler.
 
 **No terrain polygons loading**
 1. Open browser DevTools → Network tab
