@@ -235,9 +235,9 @@ async function loadSites() {
     onEachFeature: (feature, layer) => {
       const p = feature.properties
       const roleInfo = SITE_ROLE[p.lakescape_role] ?? SITE_ROLE._default
-      // Sites keep floating tooltip (small markers, no race condition)
+      const label = p.name || p.ident_cely || p.katastr || 'Site'
       layer.bindTooltip(
-        `<strong>${p.name}</strong><br>${roleInfo.label} ${certBadge(p.certainty)}`,
+        `<strong>${label}</strong><br>${roleInfo.label} ${certBadge(p.certainty)}`,
         { sticky: false, direction: 'top', offset: [0, -12] }
       )
       layer.on('click', (e) => {

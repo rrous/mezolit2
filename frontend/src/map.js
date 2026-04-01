@@ -149,17 +149,23 @@ function _renderLegend() {
 // ── Legend row renderers ───────────────────────────────────────────────────────
 
 const BIOTOPE_LABELS = {
-  bt_001: 'Lake',
-  bt_002: 'Wetland',
-  bt_003: 'Boreal forest',
-  bt_004: 'Open upland',
-  bt_005: 'Coastal saltmarsh',
-  bt_006: 'Chalk scrub',
-  bt_007: 'Riparian forest',
-  bt_008: 'Intertidal',
-  bt_009: 'Forest glade',
-  bt_010: 'Post-fire grassland',
-  bt_011: 'Drought wetland'
+  // CZ biotopes
+  bt_cz_001: 'Bor na krystaliku',
+  bt_cz_002: 'Smíšený les na pískovci',
+  bt_cz_003: 'Vlhký les na jílovci',
+  bt_cz_004: 'Mokřadní olšina',
+  bt_cz_005: 'Habrový les na terase',
+  bt_cz_006: 'Lužní les',
+  bt_cz_007: 'Borový bor na píscích',
+  bt_cz_008: 'Rašelinný bor',
+  bt_cz_009: 'Paleojezero',
+  bt_cz_010: 'Říční lužní les',
+  bt_cz_011: 'Lesní palouk',
+  // Yorkshire
+  bt_001: 'Lake', bt_002: 'Wetland', bt_003: 'Boreal forest',
+  bt_004: 'Open upland', bt_005: 'Coastal saltmarsh', bt_006: 'Chalk scrub',
+  bt_007: 'Riparian forest', bt_008: 'Intertidal', bt_009: 'Forest glade',
+  bt_010: 'Post-fire grassland', bt_011: 'Drought wetland'
 }
 
 function terrainSubtypeLegendRows(visibleSet) {

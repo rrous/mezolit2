@@ -6,6 +6,7 @@
 data/raw/dem/
 data/raw/rivers/
 data/raw/gebco/
+data/raw/cz/
 yorkshire_dem.tif
 
 # ── Local tooling ─────────────────────────────────────────────

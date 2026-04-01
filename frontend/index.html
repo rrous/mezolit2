@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yorkshire ~6200 BCE — Mesolithic Landscape</title>
+  <title>Třeboňsko ~7000 BCE — Mesolithic Landscape</title>
 </head>
 <body>
 
@@ -12,8 +12,8 @@
     <!-- Top bar: title + controls -->
     <header id="topbar">
       <div id="title-block">
-        <span id="title-main">Yorkshire <em>~6200 BCE</em></span>
-        <span id="title-sub">Mesolithic Landscape Reconstruction <span class="poc-badge">PoC</span></span>
+        <span id="title-main">Třeboňsko <em>~7000 BCE</em></span>
+        <span id="title-sub">Mezolitická rekonstrukce krajiny <span class="poc-badge">PoC</span></span>
       </div>
 
       <nav id="controls">
@@ -92,42 +92,42 @@
       <form method="dialog"><button class="modal-close-btn">✕</button></form>
     </div>
     <div id="modal-body">
-      <h3>Overview</h3>
-      <p>Interactive reconstruction of the Mesolithic landscape of Yorkshire, England, at approximately <strong>6200 BCE</strong> — roughly 1,000 years before the final flooding of Doggerland.</p>
+      <h3>Přehled</h3>
+      <p>Interaktivní rekonstrukce mezolitické krajiny Třeboňska, jižní Čechy, přibližně <strong>7000 BCE</strong> — raný atlantik, kompletní lesní pokryv, paleojezera s otevřenou hladinou.</p>
 
-      <h3>Data sources</h3>
+      <h3>Datové zdroje</h3>
       <ul>
-        <li><strong>Terrain:</strong> Copernicus DEM GLO-30 (30 m resolution)</li>
-        <li><strong>River network:</strong> OS Open Rivers (modern proxy)</li>
-        <li><strong>Coastline:</strong> GEBCO 2023 (−25 m sea-level offset)</li>
-        <li><strong>Lake Flixton:</strong> ADS GML data (doi:10.5284/1041580; Palmer et al. 2015)</li>
-        <li><strong>Archaeological sites:</strong> ADS — Taylor &amp; Alison 2018</li>
+        <li><strong>Geologie:</strong> ČGS geologická mapa 1:50 000</li>
+        <li><strong>DEM:</strong> ČÚZK DMR 5G (2m pixel, přesamplováno na 10m)</li>
+        <li><strong>Říční síť:</strong> DIBAVOD A02 (filtrováno: umělé kanály odstraněny)</li>
+        <li><strong>Paleojezera:</strong> ČGS lakustrické sedimenty + Pokorný et al. 2010</li>
+        <li><strong>Archeologické lokality:</strong> AMČR digiarchiv (mezolitické akce)</li>
       </ul>
 
-      <h3>Controls</h3>
+      <h3>Ovládání</h3>
       <ul>
-        <li><strong>Color by Biotope/Terrain</strong> — switch polygon coloring between biotope types and terrain subtypes</li>
-        <li><strong>Ekotony</strong> — toggle ecotone boundaries; hiding them reveals certainty borders on terrain polygons</li>
+        <li><strong>Color by Biotope/Terrain</strong> — přepínání barvy polygonů mezi biotopy a terrain subtypes</li>
+        <li><strong>Ekotony</strong> — přepínání ekotonních hranic; skrytím se zobrazí certainty okraje</li>
       </ul>
 
-      <h3>Certainty levels</h3>
+      <h3>Úrovně jistoty</h3>
       <ul class="certainty-list">
-        <li><span class="cert-badge cert-DIRECT">DIRECT</span> Direct archaeological evidence — solid border</li>
-        <li><span class="cert-badge cert-INDIRECT">INDIRECT</span> Indirect / analogical — dashed border</li>
-        <li><span class="cert-badge cert-INFERENCE">INFERENCE</span> Inferred from geomorphology — dotted border</li>
-        <li><span class="cert-badge cert-SPECULATION">SPECULATION</span> Hypothetical reconstruction</li>
+        <li><span class="cert-badge cert-DIRECT">DIRECT</span> Přímý archeologický důkaz</li>
+        <li><span class="cert-badge cert-INDIRECT">INDIRECT</span> Nepřímý / analogický důkaz</li>
+        <li><span class="cert-badge cert-INFERENCE">INFERENCE</span> Odvozeno z geomorfologie</li>
+        <li><span class="cert-badge cert-SPECULATION">SPECULATION</span> Hypotetická rekonstrukce</li>
       </ul>
 
-      <h3>Known limitations</h3>
+      <h3>Známá omezení</h3>
       <ul>
-        <li>Terrain classification uses elevation bands — no BGS geology data (planned for v2)</li>
-        <li>River network is modern OS data, used as a proxy for Mesolithic drainage</li>
-        <li>Biotope assignments are knowledge-based estimates from published literature</li>
-        <li>656 terrain polygons at ~30 m source resolution</li>
+        <li>Terrain klasifikace z ČGS 1:50k — omezená granularita Klikovského souvrství</li>
+        <li>Říční síť je moderní DIBAVOD proxy (umělé kanály odstraněny)</li>
+        <li>Rybníky (15.–18. stol.) odstraněny, nahrazeny paleokrajinou</li>
+        <li>867 terrain polygonů, 8 ekotonních typů, 12 archeologických lokalit</li>
       </ul>
 
       <p class="modal-footer">
-        Knowledge base: <em>Mezolit2 PoC</em> · Yorkshire bbox W:−2.5° E:0.1° S:53.5° N:54.7°
+        Knowledge base: <em>Mezolit2 PoC</em> · Třeboňsko bbox SW:48.93°N,14.53°E NE:49.22°N,14.95°E
       </p>
     </div>
   </dialog>
