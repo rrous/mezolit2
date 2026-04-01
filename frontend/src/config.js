@@ -3,9 +3,9 @@ export const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // ── Region detection ─────────────────────────────────────────────────────────
-// CZ mode: serve static GeoJSON from /data/cz/ (no Supabase needed)
+// CZ mode: uses same Supabase DB as Yorkshire — bbox-based queries return CZ data
 export const REGION = 'cz'
-export const STATIC_MODE = true
+export const STATIC_MODE = !SUPABASE_URL  // fallback to static if no Supabase configured
 
 // ── Map defaults ───────────────────────────────────────────────────────────────
 export const MAP_CENTER = [49.08, 14.73]  // Třeboňsko (Švarcenberk)
