@@ -1,7 +1,7 @@
 {
   "meta": {
     "region": "Trebonsko (CZ)",
-    "date": "2026-04-10T20:15:46.433389",
+    "date": "2026-04-10T20:41:13.919103",
     "tests_total": 33,
     "tests_executed": 18,
     "tests_skipped": 18
@@ -11,7 +11,7 @@
     "PASS": 12,
     "WARN": 6
   },
-  "aggregate_score": 0.872,
+  "aggregate_score": 0.873,
   "results": [
     {
       "test_id": "T-ARCH-01",
@@ -298,8 +298,8 @@
       "name": "Paleojezero elevace",
       "category": "PHY",
       "status": "PASS",
-      "details": "Svarcenberk: DEM centroid=412.9m, pipeline elevation=412.9m, diff=0.0m\nNote: Pokorny et al. 2010 -- published level ~410-415m asl\nDEM value 412.9m is within expected range 407-418m",
-      "score": 0.963,
+      "details": "Svarcenberk: DEM centroid=412.7m, pipeline elevation=412.9m, diff=0.2m\nNote: Pokorny et al. 2010 -- published level ~410-415m asl\nDEM value 412.7m is within expected range 407-418m",
+      "score": 0.978,
       "n_tested": 1,
       "n_passed": 0,
       "n_failed": 0
