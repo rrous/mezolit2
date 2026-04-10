@@ -40,8 +40,8 @@ CZ_TERRAIN_SUBTYPES = [
     },
     {
         'id': 'tst_cz_002', 'name': 'Pískovcová plošina',
-        'description': 'Křídové pískovce Klikovského souvrství (svrchní vrstvy) — hlavní výplň pánve',
-        'hydrology': 'well_drained', 'slope': 'flat',
+        'description': 'Křídové pískovce Klikovského souvrství (svrchní vrstvy) — hlavní výplň pánve, s jílovcovými/prachovcovými vložkami',
+        'hydrology': 'mixed_permeability', 'slope': 'flat',
         'substrate': 'cretaceous_sandstone',
         'elevation_min_m': 400, 'elevation_max_m': 500,
         'certainty': 'DIRECT', 'source': 'CGS geologická mapa 1:50 000',

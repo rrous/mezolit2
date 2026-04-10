@@ -33,8 +33,8 @@ try:
     import rasterio
     from rasterio.warp import calculate_default_transform, reproject, Resampling
     from rasterio.features import shapes
-    from shapely.geometry import shape, mapping, box, Point, MultiPolygon, Polygon
-    from shapely.ops import unary_union
+    from shapely.geometry import shape, mapping, box, Point, MultiPolygon, Polygon, LineString
+    from shapely.ops import unary_union, linemerge, split
     from shapely.validation import make_valid
     import geopandas as gpd
     import pandas as pd
@@ -43,6 +43,10 @@ except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Install: pip install -r requirements.txt")
     sys.exit(1)
+
+# numpy compat for pysheds
+if not hasattr(np, 'in1d'):
+    np.in1d = np.isin
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -97,7 +101,7 @@ CGS_MAPPING = {
     'cret_sand': {
         'id': 'tst_cz_002',
         'substrate': 'cretaceous_sandstone',
-        'hydrology': 'well_drained',
+        'hydrology': 'mixed_permeability',  # sandstone with claystone/siltstone interbeds
         'match': lambda f: (
             _is_krida(f)
             and 'svrchní' in f.get('vrstvy', '').lower()
@@ -186,7 +190,7 @@ CGS_MAPPING = {
     'cretaceous_other': {
         'id': 'tst_cz_002',  # default to sandstone for unclassified cretaceous
         'substrate': 'cretaceous_sandstone',
-        'hydrology': 'well_drained',
+        'hydrology': 'mixed_permeability',  # sandstone with claystone/siltstone interbeds
         'match': lambda f: _is_krida(f)
     },
 }
@@ -493,6 +497,231 @@ def process_rivers():
 
     print(f"  Final river network: {len(rivers_out)} segments")
     return rivers_out
+
+
+def reconstruct_mesolithic_rivers(rivers_gdf):
+    """Reconstruct mesolithic river network using DEM flow accumulation.
+
+    Strategy:
+    1. Remove artificial channels (odlehčovač, náhon, svodnice, etc.)
+    2. Compute DEM flow accumulation → natural drainage network
+    3. Outside paleolakes: keep DIBAVOD natural rivers (precise geometry)
+    4. Inside paleolakes:
+       - open_water paleolakes: clip rivers at lake boundary (river enters/exits)
+       - sediment/peat paleolakes: replace with DEM flow lines (wet valleys)
+    5. Merge DIBAVOD + DEM segments into continuous network
+    """
+    from pysheds.grid import Grid
+    from pysheds.sview import Raster, ViewFinder
+    from pyproj import CRS, Transformer
+    import time
+
+    print("\n" + "=" * 60)
+    print("Step 4b: Mesolithic river reconstruction")
+    print("=" * 60)
+
+    dem_path = os.path.join(RAW_CZ, 'dem', 'trebonsko_dmr5g_10m.tif')
+    paleolakes_path = os.path.join(RAW_CZ, 'paleolakes_cz.geojson')
+
+    if not os.path.exists(dem_path):
+        print("  WARNING: DEM not found, skipping reconstruction")
+        return rivers_gdf
+    if not os.path.exists(paleolakes_path):
+        print("  WARNING: Paleolakes not found, skipping reconstruction")
+        return rivers_gdf
+
+    # --- Load paleolakes ---
+    with open(paleolakes_path, encoding='utf-8') as f:
+        paleolakes = json.load(f)
+
+    open_water_geoms = []
+    sediment_geoms = []
+    for feat in paleolakes['features']:
+        if not feat['geometry']:
+            continue
+        geom = shape(feat['geometry'])
+        pl_type = feat['properties'].get('type', '')
+        if pl_type == 'paleolake_open_water':
+            open_water_geoms.append(geom)
+        else:
+            sediment_geoms.append(geom)
+
+    all_lake_geoms = open_water_geoms + sediment_geoms
+    if not all_lake_geoms:
+        print("  No paleolake geometries, skipping reconstruction")
+        return rivers_gdf
+
+    open_water_union = unary_union(open_water_geoms) if open_water_geoms else None
+    sediment_union = unary_union(sediment_geoms) if sediment_geoms else None
+    all_lake_union = unary_union(all_lake_geoms)
+
+    print(f"  Paleolakes: {len(open_water_geoms)} open water, "
+          f"{len(sediment_geoms)} sediment/peat")
+
+    # --- Step 1: Remove artificial channels ---
+    artificial_keywords = [
+        'odleh', 'nápust', 'výpust', 'napust', 'vypust',
+        'stokov', 'kanál', 'kanal', 'strouha', 'svodnic',
+        'přivaděč', 'privadec', 'náhon', 'nahon', 'nová řeka',
+        'nova reka', 'odvod', 'převod', 'prevod',
+    ]
+
+    n_before = len(rivers_gdf)
+    keep_mask = []
+    for _, row in rivers_gdf.iterrows():
+        name = str(row.get('NAZ_TOK', '') or '').lower()
+        is_artificial = any(kw in name for kw in artificial_keywords)
+        keep_mask.append(not is_artificial)
+    rivers_clean = rivers_gdf[keep_mask].copy()
+    n_removed_name = n_before - len(rivers_clean)
+    print(f"  Removed {n_removed_name} artificial channels (by name)")
+
+    # --- Step 2: Clip DIBAVOD rivers at paleolake boundaries ---
+    # Rivers outside lakes: keep as-is
+    # Rivers crossing open water: clip to outside (river ends at lake shore)
+    # Rivers crossing sediment areas: will be replaced by DEM flow
+    clipped_geoms = []
+    clipped_data = []
+    n_clipped = 0
+
+    for idx, row in rivers_clean.iterrows():
+        geom = row.geometry
+        if geom is None or geom.is_empty:
+            continue
+
+        if not geom.intersects(all_lake_union):
+            # Fully outside — keep as-is
+            clipped_geoms.append(geom)
+            clipped_data.append(row)
+        else:
+            # Compute portion outside lakes
+            outside = geom.difference(all_lake_union)
+            if outside.is_empty:
+                n_clipped += 1
+                continue  # Fully inside lake — drop (DEM will replace)
+
+            # Keep the outside portion
+            # difference() may return MultiLineString — keep all parts
+            if outside.length / geom.length < 0.1:
+                n_clipped += 1
+                continue  # Too little left — drop
+
+            n_clipped += 1
+            clipped_geoms.append(outside)
+            clipped_data.append(row)
+
+    print(f"  Clipped/dropped {n_clipped} rivers at paleolake boundaries")
+
+    # Build GeoDataFrame from clipped DIBAVOD rivers
+    if clipped_data:
+        dibavod_clean = gpd.GeoDataFrame(clipped_data, geometry=clipped_geoms,
+                                         crs=rivers_gdf.crs)
+    else:
+        dibavod_clean = gpd.GeoDataFrame(columns=rivers_gdf.columns, crs=rivers_gdf.crs)
+
+    # --- Step 3: DEM flow accumulation ---
+    t0 = time.time()
+    print("  Computing DEM flow accumulation...")
+
+    with rasterio.open(dem_path) as src:
+        dem_data = src.read(1)
+        dem_transform = src.transform
+
+    crs_5514 = CRS.from_epsg(5514)
+    vf = ViewFinder(affine=dem_transform, shape=dem_data.shape, nodata=-9999,
+                    crs=crs_5514)
+    grid = Grid(viewfinder=vf)
+    dem_raster = Raster(dem_data.astype(np.float64), viewfinder=vf)
+
+    pit_filled = grid.fill_pits(dem_raster)
+    flooded = grid.fill_depressions(pit_filled)
+    inflated = grid.resolve_flats(flooded)
+    fdir = grid.flowdir(inflated)
+    acc = grid.accumulation(fdir)
+
+    print(f"  Flow accumulation computed in {time.time()-t0:.1f}s")
+    print(f"  Accumulation range: {np.nanmin(acc):.0f} - {np.nanmax(acc):.0f}")
+
+    # --- Step 4: Extract DEM streams inside sediment/peat paleolakes ---
+    threshold = 500  # ~0.05 km² catchment area
+    t1 = time.time()
+    streams_geojson = grid.extract_river_network(fdir, acc > threshold)
+    print(f"  DEM streams extracted: {len(streams_geojson['features'])} segments "
+          f"({time.time()-t1:.1f}s)")
+
+    # Transform DEM streams from S-JTSK to WGS84
+    to_wgs = Transformer.from_crs('EPSG:5514', 'EPSG:4326', always_xy=True)
+
+    dem_stream_geoms = []
+    for feat in streams_geojson['features']:
+        coords_jtsk = feat['geometry']['coordinates']
+        coords_wgs = [to_wgs.transform(x, y) for x, y in coords_jtsk]
+        if len(coords_wgs) >= 2:
+            line = LineString(coords_wgs)
+            dem_stream_geoms.append(line)
+
+    print(f"  DEM streams transformed to WGS84: {len(dem_stream_geoms)}")
+
+    # Filter: keep only DEM streams that are inside sediment/peat paleolakes
+    # (these replace the missing/clipped DIBAVOD rivers)
+    dem_in_lakes = []
+    if sediment_union:
+        for line in dem_stream_geoms:
+            if line.intersects(sediment_union):
+                # Keep only the portion inside paleolake sediment areas
+                inside = line.intersection(sediment_union)
+                if not inside.is_empty and inside.length > 0:
+                    # Filter out tiny fragments
+                    if inside.length * 111_000 > 50:  # >50m
+                        dem_in_lakes.append(inside)
+
+    print(f"  DEM streams inside sediment paleolakes: {len(dem_in_lakes)}")
+
+    # Build GeoDataFrame for DEM-derived streams
+    dem_features = []
+    for i, geom in enumerate(dem_in_lakes):
+        dem_features.append({
+            'NAZ_TOK': None,
+            'terrain_subtype_id': 'tst_cz_010',
+            'source': 'DEM flow accumulation (mesolithic reconstruction)',
+            'certainty': 'SPECULATION',
+            'geometry': geom,
+        })
+
+    if dem_features:
+        dem_gdf = gpd.GeoDataFrame(dem_features,
+                                   geometry='geometry',
+                                   crs='EPSG:4326')
+    else:
+        dem_gdf = gpd.GeoDataFrame(columns=['geometry'], crs='EPSG:4326')
+
+    # --- Step 5: Merge DIBAVOD clean + DEM lake streams ---
+    # Ensure compatible columns
+    merge_cols = ['NAZ_TOK', 'terrain_subtype_id', 'source', 'certainty', 'geometry']
+    for col in merge_cols:
+        if col not in dibavod_clean.columns and col != 'geometry':
+            dibavod_clean[col] = None
+        if col not in dem_gdf.columns and col != 'geometry':
+            dem_gdf[col] = None
+
+    merged = pd.concat([
+        dibavod_clean[merge_cols],
+        dem_gdf[merge_cols]
+    ], ignore_index=True)
+    merged = gpd.GeoDataFrame(merged, geometry='geometry', crs='EPSG:4326')
+
+    # Remove empty/null geometries
+    merged = merged[merged.geometry.notna() & ~merged.geometry.is_empty].copy()
+
+    print(f"\n  === River reconstruction summary ===")
+    print(f"  Input DIBAVOD:        {n_before} segments")
+    print(f"  Removed artificial:   {n_removed_name}")
+    print(f"  Clipped at lakes:     {n_clipped}")
+    print(f"  DIBAVOD kept:         {len(dibavod_clean)}")
+    print(f"  DEM-derived added:    {len(dem_gdf)}")
+    print(f"  Final merged:         {len(merged)} segments")
+
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -809,6 +1038,8 @@ def main():
     # Step 4: Rivers
     if not args.only or args.only == 'rivers':
         rivers_gdf = process_rivers()
+        if rivers_gdf is not None:
+            rivers_gdf = reconstruct_mesolithic_rivers(rivers_gdf)
     else:
         rivers_gdf = None
 

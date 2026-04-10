@@ -12,6 +12,9 @@ yorkshire_dem.tif
 # ── Local tooling ─────────────────────────────────────────────
 .claude/
 
+# ── Large intermediate files ─────────────────────────────────
+*.npy
+
 # ── Python ───────────────────────────────────────────────────
 __pycache__/
 *.py[cod]

@@ -141,6 +141,14 @@ def import_ecotones(cur, geojson):
         geom_json = json.dumps(feature['geometry'])
         eco_id = props.get('id')
 
+        # Skip generic ecotone (biotope_a_id='multiple') — no FK reference
+        # Its geometry is the union of all named ecotones, used only for validation
+        bt_a = props.get('biotope_a_id')
+        bt_b = props.get('biotope_b_id')
+        if bt_a == 'multiple' or bt_b == 'multiple':
+            print(f"  Skipping {eco_id} (generic aggregate — no FK biotope refs)")
+            continue
+
         # Try to update existing KB row
         cur.execute("""
             UPDATE ecotones
@@ -166,7 +174,7 @@ def import_ecotones(cur, geojson):
                 )
             """, (
                 eco_id, props.get('name'),
-                props.get('biotope_a_id'), props.get('biotope_b_id'),
+                bt_a, bt_b,
                 geom_json,
                 props.get('edge_effect_factor'),
                 props.get('human_relevance'),

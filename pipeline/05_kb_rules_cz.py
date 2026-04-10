@@ -252,10 +252,19 @@ def create_riparian_zones(terrain_geojson):
     riparian_count = 0
     feat_id = 2000
 
+    # Terrain types where riparian corridors are created:
+    # Primary (floodplain/terrace): tst_cz_005, tst_cz_006 — always create riparian
+    # Secondary (other substrates rivers cross): create narrower riparian strip
+    primary_riparian = {'tst_cz_005', 'tst_cz_006'}
+    # All terrain types eligible for riparian zones (rivers cross them)
+    riparian_eligible = {
+        'tst_cz_001', 'tst_cz_002', 'tst_cz_003', 'tst_cz_004',
+        'tst_cz_005', 'tst_cz_006', 'tst_cz_007', 'tst_cz_008', 'tst_cz_009',
+    }
+
     for feature in terrain_geojson['features']:
         tst_id = feature['properties'].get('terrain_subtype_id')
-        # Only split floodplain (tst_cz_006) and river terrace (tst_cz_005) polygons
-        if tst_id not in ('tst_cz_006', 'tst_cz_005'):
+        if tst_id not in riparian_eligible:
             new_features.append(feature)
             continue
 
@@ -269,7 +278,9 @@ def create_riparian_zones(terrain_geojson):
         remainder = poly.difference(riparian_buffer)
 
         # Skip if riparian is too small relative to total
-        if riparian_zone.area < poly.area * 0.05:
+        # For non-floodplain terrain, require at least 3% of polygon area
+        min_pct = 0.03 if tst_id not in primary_riparian else 0.05
+        if riparian_zone.area < poly.area * min_pct:
             new_features.append(feature)
             continue
 
@@ -389,6 +400,9 @@ def generate_ecotones(terrain_geojson):
     raw_segments = []
     processed_pairs = set()
 
+    # Also collect generic ecotones for ANY adjacent different-biotope polygons
+    generic_segments = []  # (bt_pair_frozenset, geometry)
+
     for idx, row in gdf.iterrows():
         if not row.get('biotope_id'):
             continue
@@ -407,8 +421,8 @@ def generate_ecotones(terrain_geojson):
             if not neighbor.get('biotope_id'):
                 continue
 
-            bt_pair = frozenset([row['biotope_id'], neighbor['biotope_id']])
-            if bt_pair not in ecotone_lookup:
+            # Skip same-biotope boundaries (not ecotones)
+            if row['biotope_id'] == neighbor['biotope_id']:
                 continue
 
             if not row.geometry.intersects(neighbor.geometry):
@@ -440,14 +454,25 @@ def generate_ecotones(terrain_geojson):
             except Exception:
                 continue
 
-            eco_id, eco = ecotone_lookup[bt_pair]
-            raw_segments.append({
-                'eco_id': eco_id,
-                'eco': eco,
+            bt_pair = frozenset([row['biotope_id'], neighbor['biotope_id']])
+
+            # Named ecotone (pre-defined pair)
+            if bt_pair in ecotone_lookup:
+                eco_id, eco = ecotone_lookup[bt_pair]
+                raw_segments.append({
+                    'eco_id': eco_id,
+                    'eco': eco,
+                    'geometry': boundary
+                })
+
+            # Generic ecotone (any different-biotope boundary)
+            generic_segments.append({
+                'bt_pair': bt_pair,
                 'geometry': boundary
             })
 
-    print(f"  Raw ecotone segments: {len(raw_segments)}")
+    print(f"  Raw named ecotone segments: {len(raw_segments)}")
+    print(f"  Raw generic ecotone segments: {len(generic_segments)}")
 
     # Merge segments by ecotone type
     from collections import defaultdict
@@ -491,7 +516,47 @@ def generate_ecotones(terrain_geojson):
             'geometry': mapping(merged)
         })
 
-    print(f"  Merged ecotone types: {len(ecotone_features)}")
+    print(f"  Merged named ecotone types: {len(ecotone_features)}")
+
+    # Add generic ecotones: merge ALL different-biotope boundaries into one feature
+    if generic_segments:
+        all_generic_geoms = [seg['geometry'] for seg in generic_segments]
+        generic_merged = unary_union(all_generic_geoms)
+        if generic_merged.geom_type == 'LineString':
+            generic_merged = MultiLineString([generic_merged])
+        elif generic_merged.geom_type == 'GeometryCollection':
+            lines = [g for g in generic_merged.geoms
+                     if g.geom_type in ('LineString', 'MultiLineString')]
+            if lines:
+                generic_merged = unary_union(lines)
+                if generic_merged.geom_type == 'LineString':
+                    generic_merged = MultiLineString([generic_merged])
+
+        if not generic_merged.is_empty and generic_merged.geom_type in ('MultiLineString', 'LineString'):
+            if generic_merged.geom_type == 'LineString':
+                generic_merged = MultiLineString([generic_merged])
+
+            # Collect unique biotope pairs
+            all_bt_ids = set()
+            for seg in generic_segments:
+                all_bt_ids.update(seg['bt_pair'])
+
+            ecotone_features.append({
+                'type': 'Feature',
+                'properties': {
+                    'id': 'ec_cz_generic',
+                    'name': 'Obecny ekoton (vsechny biotopove hranice)',
+                    'biotope_a_id': 'multiple',
+                    'biotope_b_id': 'multiple',
+                    'edge_effect_factor': 1.2,
+                    'human_relevance': 'All biotope boundaries — ecotone diversity indicator',
+                    'certainty': 'INFERENCE',
+                    'source': 'Automatic boundary extraction from terrain+biotope polygons',
+                    'biotope_ids': sorted(all_bt_ids),
+                },
+                'geometry': mapping(generic_merged)
+            })
+            print(f"  Added generic ecotone layer: ec_cz_generic ({len(generic_segments)} segments, {len(all_bt_ids)} biotope types)")
 
     # Add synthetic ecotones for lake boundaries
     ecotone_features = add_synthetic_lake_ecotone(ecotone_features, gdf)
