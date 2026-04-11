@@ -510,7 +510,8 @@ html, body, #app {
 .role-primary { background: #e63946; color: #fff; font-size: 1.1rem; }
 .role-island  { background: #4A90D9; color: #fff; }
 .role-shore   { background: #f4a261; color: #1a1a2e; }
-.role-scatter { background: #888;    color: #fff; font-size: 0.65rem; }
+.role-scatter { background: #d4a843; color: #1a1a2e; font-size: 0.85rem;
+               border: 2px solid rgba(0,0,0,0.6); box-shadow: 0 0 4px rgba(0,0,0,0.5); }
 
 /* ── Leaflet tooltip overrides ─────────────────────────────────────────────────── */
 .leaflet-tooltip {
