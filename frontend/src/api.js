@@ -17,7 +17,7 @@ async function rpc(fn, params = {}, { cache = false } = {}) {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
       'Accept':       'application/json',
-      'Content-Profile': 'public'
+      'Content-Profile': 'api'
     },
     body: JSON.stringify(params)
   })
