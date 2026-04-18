@@ -56,8 +56,31 @@ CREATE POLICY "Allow public read access"
     ON site_instances FOR SELECT
     USING (true);
 
--- spatial_ref_sys: PŘESKOČENO — PostGIS systémová tabulka vlastněná supabase_admin.
--- Nelze měnit RLS. Tabulka neobsahuje citlivá data (jen SRID definice).
+-- spatial_ref_sys: PostGIS systémová tabulka vlastněná supabase_admin.
+-- Co NEFUNGUJE na Supabase jako postgres role:
+--   * ALTER TABLE ... ENABLE RLS          → must be owner of table
+--   * ALTER TABLE ... OWNER TO postgres   → must be owner
+--   * ALTER EXTENSION postgis SET SCHEMA  → postgis is not relocatable
+--   * ALTER EXTENSION postgis DROP TABLE  → must be owner of extension
+--
+-- Co FUNGUJE:
+--   Splinter lint 0013_rls_disabled_in_public kontroluje i granty přes
+--   has_table_privilege(anon|authenticated, ...). Tato funkce respektuje
+--   i dědičnost z role PUBLIC. Takže stačí odebrat SELECT grant:
+--
+--     - z role PUBLIC (zdroj dědění pro anon/authenticated)
+--     - přímo z anon a authenticated (kdyby měly explicitní grant)
+--
+--   → has_table_privilege vrátí FALSE → lint zmizí.
+--
+-- Proč to nerozbije web:
+--   - Frontend komunikuje VÝHRADNĚ přes RPC /rest/v1/rpc/get_* (frontend/src/api.js).
+--   - Všechny RPC jsou SECURITY DEFINER → běží jako postgres/supabase_admin,
+--     který má na spatial_ref_sys přímý přístup (ne přes PUBLIC dědičnost).
+--   - PUBLIC roli NESAHÁME plošně (to minule rozbilo web) — jen tuhle jednu tabulku.
+REVOKE ALL ON TABLE public.spatial_ref_sys FROM PUBLIC;
+REVOKE ALL ON TABLE public.spatial_ref_sys FROM anon;
+REVOKE ALL ON TABLE public.spatial_ref_sys FROM authenticated;
 
 -- ============================================================
 -- 2. FIX mutable search_path on all RPC functions
@@ -86,12 +109,7 @@ ALTER FUNCTION get_sites()
 
 -- ============================================================
 -- 3. PostGIS extension in public schema (WARN)
---
---    Supabase doporučuje přesunout do schema "extensions":
---      ALTER EXTENSION postgis SET SCHEMA extensions;
---    ALE: Toto může rozbít existující funkce a dotazy, pokud
---    nepoužívají plně kvalifikované názvy (extensions.ST_...).
---    Pro PoC necháváme v public. V produkci zvážit migraci.
+--    Řešeno v samostatném skriptu 09_move_postgis.sql.
 -- ============================================================
 
 -- ============================================================
