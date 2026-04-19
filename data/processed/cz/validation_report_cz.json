@@ -1,0 +1,341 @@
+{
+  "meta": {
+    "region": "Trebonsko (CZ)",
+    "date": "2026-04-10T20:41:13.919103",
+    "tests_total": 33,
+    "tests_executed": 18,
+    "tests_skipped": 18
+  },
+  "summary": {
+    "SKIP": 18,
+    "PASS": 12,
+    "WARN": 6
+  },
+  "aggregate_score": 0.873,
+  "results": [
+    {
+      "test_id": "T-ARCH-01",
+      "name": "Catchment uplnost",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Zavisi na ACTIVITY_GRAPH -- zatim neexistuje"
+    },
+    {
+      "test_id": "T-ARCH-02",
+      "name": "Surovinovy dosah",
+      "category": "ARCH",
+      "status": "PASS",
+      "details": "Primary (<30km): 12/12 (100%), Extended (<80km): 12/12 (100%)\n  site_cz_0000: nearest deposit=2.6km [PRIMARY]\n  site_cz_0002: nearest deposit=1.1km [PRIMARY]\n  site_cz_0013: nearest deposit=1.3km [PRIMARY]\n  site_cz_0014: nearest deposit=1.6km [PRIMARY]\n  site_cz_0015: nearest deposit=1.3km [PRIMARY]\n  site_cz_0016: nearest deposit=1.3km [PRIMARY]\n  site_cz_0017: nearest deposit=1.9km [PRIMARY]\n  site_cz_0018: nearest deposit=2.0km [PRIMARY]\n  site_cz_0028: nearest deposit=5.7km [PRIMARY]\n  site_cz_0001: nearest deposit=4.7km [PRIMARY]\n  site_cz_0004: nearest deposit=8.0km [PRIMARY]\n  site_cz_0011: nearest deposit=7.2km [PRIMARY]",
+      "score": 1.0,
+      "n_tested": 12,
+      "n_passed": 12,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-ARCH-03",
+      "name": "Vyhledova poloha",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Vyzaduje viewshed analyzu (DEM line-of-sight)"
+    },
+    {
+      "test_id": "T-ARCH-04",
+      "name": "Nadmorska vyska lokalit",
+      "category": "ARCH",
+      "status": "PASS",
+      "details": "Sites: mean=439m (n=9), Random: mean=459m (n=916)\nSite-Random mean diff: -20m\nSite elevations: min=413m, max=538m\n  site_cz_0000: 421m\n  site_cz_0002: 499m\n  site_cz_0013: 413m\n  site_cz_0014: 422m\n  site_cz_0015: 413m\n  site_cz_0016: 413m\n  site_cz_0017: 413m\n  site_cz_0018: 414m\n  site_cz_0001: 538m",
+      "score": 1.0,
+      "n_tested": 9,
+      "n_passed": 0,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-ARCH-05",
+      "name": "Biotop vs. sezona",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Zavisi na KB sezonnich modifikatorech -- zatim neexistuji"
+    },
+    {
+      "test_id": "T-ARCH-06",
+      "name": "Hustota vs. produktivita",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Zavisi na T-ARCH-07 (detekcni bias) + KB produktivity"
+    },
+    {
+      "test_id": "T-ARCH-07",
+      "name": "Detekcni bias",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Vyzaduje AMCR pocet akci per grid bunku -- v aktualnim exportu neni"
+    },
+    {
+      "test_id": "T-ARCH-08",
+      "name": "Proxy populace",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Zavisi na KB vrstve 4-5 + izotopove literature"
+    },
+    {
+      "test_id": "T-ARCH-09",
+      "name": "Shlukovani lokalit",
+      "category": "ARCH",
+      "status": "SKIP",
+      "details": "Zavisi na T-ARCH-07 + vyzaduje scipy (neni nainstalovano)"
+    },
+    {
+      "test_id": "T-ECO-01",
+      "name": "Dostupnost vody",
+      "category": "ECO",
+      "status": "WARN",
+      "details": "8/12 sites within 500m of water (67%), mean distance=538m\n  site_cz_0000: 87m to water [OK]\n  site_cz_0002: 613m to water [FAR]\n  site_cz_0013: 29m to water [OK]\n  site_cz_0014: 67m to water [OK]\n  site_cz_0015: 29m to water [OK]\n  site_cz_0016: 29m to water [OK]\n  site_cz_0017: 22m to water [OK]\n  site_cz_0018: 77m to water [OK]\n  site_cz_0028: 2484m to water [FAR]\n  site_cz_0001: 129m to water [OK]\n  site_cz_0004: 1070m to water [FAR]\n  site_cz_0011: 1822m to water [FAR]",
+      "score": 0.667,
+      "n_tested": 12,
+      "n_passed": 8,
+      "n_failed": 4
+    },
+    {
+      "test_id": "T-ECO-02",
+      "name": "Ekotonova poloha",
+      "category": "ECO",
+      "status": "WARN",
+      "details": "Sites near ecotone: 67% (8/12), random baseline: 68%, ratio: 0.98x\nNote: only 12 sites -- low statistical power for preference test\n  site_cz_0000: 3m to ecotone [OK]\n  site_cz_0002: 577m to ecotone [FAR]\n  site_cz_0013: 15m to ecotone [OK]\n  site_cz_0014: 55m to ecotone [OK]\n  site_cz_0015: 15m to ecotone [OK]\n  site_cz_0016: 15m to ecotone [OK]\n  site_cz_0017: 5m to ecotone [OK]\n  site_cz_0018: 34m to ecotone [OK]\n  site_cz_0028: 105m to ecotone [OK]\n  site_cz_0001: 1683m to ecotone [FAR]\n  site_cz_0004: 4684m to ecotone [FAR]\n  site_cz_0011: 4210m to ecotone [FAR]",
+      "score": 0.652,
+      "n_tested": 12,
+      "n_passed": 0,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-ECO-03",
+      "name": "Habitat jelena",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Vyzaduje AMCR data s faunalni kategorii (jeleni kosti) -- v datech neni fauna flag"
+    },
+    {
+      "test_id": "T-ECO-04",
+      "name": "Produktivita vs. jelen",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Zavisi na KB vrstve 4 (populace) -- zatim neexistuje"
+    },
+    {
+      "test_id": "T-ECO-05",
+      "name": "Rybi habitat",
+      "category": "ECO",
+      "status": "PASS",
+      "details": "7/12 sites within 300m of water bodies (58%)\nNote: Trebonsko pond landscape -- high water body density expected\n  site_cz_0000: 617m to water body [FAR]\n  site_cz_0002: 613m to water body [FAR]\n  site_cz_0013: 29m to water body [OK]\n  site_cz_0014: 296m to water body [OK]\n  site_cz_0015: 29m to water body [OK]\n  site_cz_0016: 29m to water body [OK]\n  site_cz_0017: 27m to water body [OK]\n  site_cz_0018: 77m to water body [OK]\n  site_cz_0028: 2484m to water body [FAR]\n  site_cz_0001: 129m to water body [OK]\n  site_cz_0004: 2656m to water body [FAR]\n  site_cz_0011: 2454m to water body [FAR]",
+      "score": 0.583,
+      "n_tested": 12,
+      "n_passed": 7,
+      "n_failed": 5
+    },
+    {
+      "test_id": "T-ECO-06",
+      "name": "Liska v dosahu",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Vyzaduje AMCR data s dolozenou liskou -- v datech neni"
+    },
+    {
+      "test_id": "T-ECO-07",
+      "name": "Ricni koridor",
+      "category": "ECO",
+      "status": "WARN",
+      "details": "1242/1963 rivers intersect riparian/floodplain zone (63.3%)\nRiparian/floodplain features: 273\nDIBAVOD marshes in bbox: 545",
+      "score": 0.633,
+      "n_tested": 1963,
+      "n_passed": 1242,
+      "n_failed": 721
+    },
+    {
+      "test_id": "T-ECO-08",
+      "name": "Vegetacni zonace",
+      "category": "ECO",
+      "status": "PASS",
+      "details": "Biotope group elevation stats:\n  wetland (M*,R*,V*): mean=458m, median=457m, range=[430-502]m (n=192)\n  riparian (L2*): mean=437m, median=429m, range=[408-498]m (n=195)\n  upland forest (L3-9*): mean=471m, median=468m, range=[437-528]m (n=198)\n\nWetland+riparian mean: 448m vs Forest mean: 471m\nZonation order correct: True\n\nNote: Trebonsko elevation range ~400-550m (mid-elevation basin)",
+      "score": 0.763,
+      "n_tested": 585,
+      "n_passed": 0,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-ECO-09",
+      "name": "Bobri habitat",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Vyzaduje vypocet spadu toku z DEM + identifikaci luznich biotopu"
+    },
+    {
+      "test_id": "T-ECO-10",
+      "name": "Tukovy problem",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Zavisi na ACTIVITY_GRAPH + KB vrstve 4-5 -- zatim neexistuje"
+    },
+    {
+      "test_id": "T-ECO-11",
+      "name": "Celorocni pokryti",
+      "category": "ECO",
+      "status": "SKIP",
+      "details": "Zavisi na ACTIVITY_GRAPH + RESOURCE data -- zatim neexistuje"
+    },
+    {
+      "test_id": "T-ECO-12",
+      "name": "Ekoton existence",
+      "category": "ECO",
+      "status": "PASS",
+      "details": "9/9 ecotones valid (distinct biotope pair + geometry)\n  ec_cz_007: bt_cz_001 <-> bt_cz_002 geom=OK\n  ec_cz_004: bt_cz_010 <-> bt_cz_002 geom=OK\n  ec_cz_001: bt_cz_002 <-> bt_cz_003 geom=OK\n  ec_cz_006: bt_cz_002 <-> bt_cz_011 geom=OK\n  ec_cz_002: bt_cz_004 <-> bt_cz_009 geom=OK\n  ec_cz_008: bt_cz_005 <-> bt_cz_006 geom=OK\n  ec_cz_003: bt_cz_007 <-> bt_cz_006 geom=OK\n  ec_cz_005: bt_cz_007 <-> bt_cz_008 geom=OK\n  ec_cz_generic: multiple <-> multiple geom=OK",
+      "score": 1.0,
+      "n_tested": 9,
+      "n_passed": 9,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-GEO-01",
+      "name": "Geologie vs. terrain",
+      "category": "GEO",
+      "status": "PASS",
+      "details": "50/71 terrain features match CGS geology (70.4%)\nMismatches:\n  tf_cz_0177 substrate=cretaceous_sandstone vs CGS: pískovce, slepence, jílovce a prachovce\n  tf_cz_0217 substrate=cretaceous_sandstone vs CGS: písek, štěrk\n  tf_cz_0185 substrate=cretaceous_sandstone vs CGS: pískovce, slepence, jílovce a prachovce\n  tf_cz_0153 substrate=cretaceous_sandstone vs CGS: pískovce, slepence, jílovce a prachovce\n  tf_cz_0237 substrate=cretaceous_claystone vs CGS: pískovce, slepence, jílovce a prachovce",
+      "score": 0.704,
+      "n_tested": 71,
+      "n_passed": 50,
+      "n_failed": 21
+    },
+    {
+      "test_id": "T-GEO-02",
+      "name": "Flint vs. geologie",
+      "category": "GEO",
+      "status": "SKIP",
+      "details": "Vyzaduje KB vocabulary s flint_availability per substrat -- nedefinovano pro CZ"
+    },
+    {
+      "test_id": "T-GEO-03",
+      "name": "Hydrologie vs. VMB",
+      "category": "GEO",
+      "status": "WARN",
+      "details": "244/283 wetlands on compatible substrate (86.2%), conflicts: 39\n  Wetland at (14.931,49.023): hydrology=well_drained, substrate=aeolian_sand\n  Wetland at (14.934,49.021): hydrology=well_drained, substrate=aeolian_sand\n  Wetland at (14.940,49.056): hydrology=well_drained, substrate=crystalline_basement\n  Wetland at (14.941,49.050): hydrology=well_drained, substrate=crystalline_basement\n  Wetland at (14.939,49.049): hydrology=well_drained, substrate=crystalline_basement",
+      "score": 0.862,
+      "n_tested": 283,
+      "n_passed": 244,
+      "n_failed": 39
+    },
+    {
+      "test_id": "T-GEO-04",
+      "name": "Kvarternich sedimenty v panvich",
+      "category": "GEO",
+      "status": "PASS",
+      "details": "48/50 lake basin features on Quaternary sediments (96.0%)\nNon-Quaternary:\n  tf_cz_0611: CGS: oblast=křída, geneze=sladkovodní až brakické, hor_karto=pískovce, slepence, jílovce a prachovce\n  tf_cz_0648: CGS: oblast=křída, geneze=sladkovodní až brakické, hor_karto=pískovce, slepence, jílovce a prachovce",
+      "score": 0.96,
+      "n_tested": 50,
+      "n_passed": 48,
+      "n_failed": 2
+    },
+    {
+      "test_id": "T-GEO-05",
+      "name": "DEM kontrolni body",
+      "category": "GEO",
+      "status": "SKIP",
+      "details": "control_points=[] (TODO) -- chybi geodeticke body pro Trebonsko"
+    },
+    {
+      "test_id": "T-PHY-01",
+      "name": "Ricni spad",
+      "category": "PHY",
+      "status": "WARN",
+      "details": "1844/1896 segments OK (97.3%)\nReversed segments:\n  Holenský p. (rv_cz_0029): start=453.1m -> end=454.1m (reverse: +0.9m)\n  Tisý p. (rv_cz_0070): start=420.3m -> end=420.9m (reverse: +0.6m)\n  Neárka (rv_cz_0106): start=438.6m -> end=439.7m (reverse: +1.1m)\n  Bukovský p. (rv_cz_0165): start=408.8m -> end=409.4m (reverse: +0.6m)\n  Ponìdraský p. (rv_cz_0180): start=426.8m -> end=427.7m (reverse: +0.9m)",
+      "score": 0.973,
+      "n_tested": 1896,
+      "n_passed": 1844,
+      "n_failed": 52
+    },
+    {
+      "test_id": "T-PHY-02",
+      "name": "Mokrad v depresi",
+      "category": "PHY",
+      "status": "WARN",
+      "details": "1063/1071 wetlands in depressions (99.3%)\nAnomalies:\n  M1.1 (70), V1C (30): center=426.7m, surround=420.3m (+6.4m)\n  M1.7 (100): center=426.7m, surround=420.5m (+6.3m)\n  V1F (5): center=545.7m, surround=539.0m (+6.7m)\n  M1.1 (50), S1.2 (50): center=440.3m, surround=433.4m (+6.9m)\n  V1F (50): center=454.0m, surround=448.6m (+5.4m)",
+      "score": 0.993,
+      "n_tested": 1071,
+      "n_passed": 1063,
+      "n_failed": 8
+    },
+    {
+      "test_id": "T-PHY-03",
+      "name": "Jezero bez povodi",
+      "category": "PHY",
+      "status": "SKIP",
+      "details": "Vyzaduje flow accumulation raster -- nutny preprocessing DEM (neni v processed data)"
+    },
+    {
+      "test_id": "T-PHY-04",
+      "name": "Ricni sit vs. substrat",
+      "category": "PHY",
+      "status": "SKIP",
+      "details": "Trebonsko = piskovce, ne kras -> nizke riziko false positive"
+    },
+    {
+      "test_id": "T-PHY-05",
+      "name": "Biotopova hranice vs. teren",
+      "category": "PHY",
+      "status": "SKIP",
+      "details": "Oba parametry SPECULATION -- test zatim nekalibrovan"
+    },
+    {
+      "test_id": "T-PHY-06",
+      "name": "Sklon vs. mokrad",
+      "category": "PHY",
+      "status": "PASS",
+      "details": "1029/1071 wetlands on flat ground (96.1%)\nSteep wetlands:\n  V1G (100): slope=8.2 deg\n  M1.1 (100): slope=7.6 deg\n  V1G (100): slope=6.9 deg\n  V4B (100): slope=13.4 deg\n  V1F (100): slope=5.2 deg",
+      "score": 0.961,
+      "n_tested": 1071,
+      "n_passed": 1029,
+      "n_failed": 42
+    },
+    {
+      "test_id": "T-PHY-07",
+      "name": "Paleojezero elevace",
+      "category": "PHY",
+      "status": "PASS",
+      "details": "Svarcenberk: DEM centroid=412.7m, pipeline elevation=412.9m, diff=0.2m\nNote: Pokorny et al. 2010 -- published level ~410-415m asl\nDEM value 412.7m is within expected range 407-418m",
+      "score": 0.978,
+      "n_tested": 1,
+      "n_passed": 0,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-PHY-08",
+      "name": "Reka vs. vodni plocha",
+      "category": "PHY",
+      "status": "PASS",
+      "details": "0/908 DIBAVOD rivers cross paleolakes (>20% inside) -- 100.0% OK\nDEM-reconstructed rivers (skipped): 1055",
+      "score": 1.0,
+      "n_tested": 908,
+      "n_passed": 908,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-PHY-09",
+      "name": "Umele kanaly",
+      "category": "PHY",
+      "status": "PASS",
+      "details": "0/908 DIBAVOD rivers flagged as likely artificial channels\nDEM-reconstructed rivers (skipped): 1055",
+      "score": 1.0,
+      "n_tested": 908,
+      "n_passed": 908,
+      "n_failed": 0
+    },
+    {
+      "test_id": "T-SUPP-01",
+      "name": "Terrain coverage",
+      "category": "SUPP",
+      "status": "PASS",
+      "details": "Terrain coverage: 98.5% of bbox\nTotal features: 789\nBiotope-assigned features: 978\nRivers: 1963\nEcotones: 9\nSites: 12\nPaleolakes: 60\n\nSubtype distribution:\n  tst_cz_001: 116 features\n  tst_cz_002: 104 features\n  tst_cz_003: 19 features\n  tst_cz_004: 29 features\n  tst_cz_005: 110 features\n  tst_cz_006: 89 features\n  tst_cz_007: 107 features\n  tst_cz_008: 50 features\n  tst_cz_009: 165 features",
+      "score": 0.985,
+      "n_tested": 789,
+      "n_passed": 0,
+      "n_failed": 0
+    }
+  ]
+}

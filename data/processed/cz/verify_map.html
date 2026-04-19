@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mezolit2 - Trebonsko Terrain Verification</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; }
+  #map { height: 100vh; }
+  .legend { background: white; padding: 10px; border-radius: 5px; line-height: 1.6; font-size: 12px; }
+  .legend i { width: 16px; height: 16px; display: inline-block; margin-right: 5px; vertical-align: middle; border: 1px solid #999; }
+  .info { background: white; padding: 8px 12px; border-radius: 5px; font-size: 12px; max-width: 300px; }
+  .stats { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; font-size: 11px; max-height: 90vh; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="stats" id="stats">Loading...</div>
+
+<script>
+const COLORS = {
+  'tst_cz_001': '#8B4513',  // crystalline basement - brown
+  'tst_cz_002': '#DEB887',  // cretaceous sandstone - burlywood
+  'tst_cz_003': '#A0522D',  // cretaceous claystone - sienna
+  'tst_cz_004': '#BC8F8F',  // neogene lacustrine - rosy brown
+  'tst_cz_005': '#D2B48C',  // river terrace - tan
+  'tst_cz_006': '#90EE90',  // floodplain - light green
+  'tst_cz_007': '#F5DEB3',  // aeolian sand - wheat
+  'tst_cz_008': '#556B2F',  // peat - dark olive
+  'tst_cz_009': '#4169E1',  // paleolake - royal blue
+  'tst_cz_010': '#1E90FF',  // river - dodger blue
+};
+
+const LABELS = {
+  'tst_cz_001': 'Krystalicke podlozi',
+  'tst_cz_002': 'Kridovy piskovec',
+  'tst_cz_003': 'Kridovy jilovec',
+  'tst_cz_004': 'Neogenni sedimenty',
+  'tst_cz_005': 'Ricni terasa',
+  'tst_cz_006': 'Ricni niva',
+  'tst_cz_007': 'Eolicky pisek',
+  'tst_cz_008': 'Raseliniste',
+  'tst_cz_009': 'Paleolake',
+  'tst_cz_010': 'Velka reka',
+};
+
+const map = L.map('map').setView([49.148, 14.707], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OSM',
+  opacity: 0.4
+}).addTo(map);
+
+// Load terrain
+fetch('terrain_features_cz.geojson')
+  .then(r => r.json())
+  .then(data => {
+    const stats = {};
+    const terrainLayer = L.geoJSON(data, {
+      style: f => {
+        const tst = f.properties.terrain_subtype_id;
+        stats[tst] = (stats[tst] || 0) + 1;
+        return {
+          fillColor: COLORS[tst] || '#999',
+          fillOpacity: 0.6,
+          color: '#333',
+          weight: 0.5
+        };
+      },
+      pointToLayer: (f, latlng) => {
+        if (f.properties.anchor_site) {
+          return L.circleMarker(latlng, {radius: 10, fillColor: 'red', color: 'white', weight: 2, fillOpacity: 1});
+        }
+        return L.circleMarker(latlng, {radius: 4, fillColor: COLORS[f.properties.terrain_subtype_id], fillOpacity: 0.8});
+      },
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        let html = `<b>${p.id}</b><br>`;
+        html += `Type: ${p.terrain_subtype_id} (${LABELS[p.terrain_subtype_id] || '?'})<br>`;
+        html += `Substrate: ${p.substrate || '-'}<br>`;
+        html += `Certainty: ${p.certainty || '-'}<br>`;
+        if (p.elevation_m) html += `Elevation: ${p.elevation_m}m<br>`;
+        if (p.name) html += `Name: ${p.name}<br>`;
+        if (p.notes) html += `Notes: ${p.notes}<br>`;
+        layer.bindPopup(html);
+      }
+    }).addTo(map);
+
+    // Stats panel
+    let statsHtml = '<b>Terrain Stats</b><br>';
+    const total = Object.values(stats).reduce((a,b) => a+b, 0);
+    statsHtml += `Total: ${total} features<br><br>`;
+    for (const [tst, count] of Object.entries(stats).sort()) {
+      const pct = (count / total * 100).toFixed(1);
+      statsHtml += `<span style="color:${COLORS[tst]}">\u25A0</span> ${tst}: ${count} (${pct}%)<br>`;
+      statsHtml += `<small style="color:#666">&nbsp;&nbsp;${LABELS[tst] || ''}</small><br>`;
+    }
+    document.getElementById('stats').innerHTML = statsHtml;
+  });
+
+// Load rivers
+fetch('rivers_cz.geojson')
+  .then(r => r.json())
+  .then(data => {
+    L.geoJSON(data, {
+      style: { color: '#1E90FF', weight: 1.5, opacity: 0.7 },
+      onEachFeature: (f, layer) => {
+        if (f.properties.name) {
+          layer.bindPopup(`<b>${f.properties.name}</b><br>${f.properties.id}`);
+        }
+      }
+    }).addTo(map);
+  });
+
+// Load sites
+fetch('sites_cz.geojson')
+  .then(r => r.json())
+  .then(data => {
+    L.geoJSON(data, {
+      pointToLayer: (f, latlng) => {
+        return L.circleMarker(latlng, {
+          radius: 7, fillColor: '#FF4500', color: 'white',
+          weight: 2, fillOpacity: 0.9
+        });
+      },
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        layer.bindPopup(`<b>${p.ident_cely || p.id}</b><br>${p.katastr || ''}<br>Source: ${p.source}`);
+      }
+    }).addTo(map);
+  });
+
+// Legend
+const legend = L.control({position: 'bottomleft'});
+legend.onAdd = () => {
+  const div = L.DomUtil.create('div', 'legend');
+  div.innerHTML = '<b>Legend</b><br>';
+  for (const [tst, label] of Object.entries(LABELS)) {
+    div.innerHTML += `<i style="background:${COLORS[tst]}"></i>${label}<br>`;
+  }
+  div.innerHTML += '<i style="background:#FF4500;border-radius:50%"></i>AMCR site<br>';
+  div.innerHTML += '<i style="background:red;border-radius:50%"></i>Svarcenberk anchor<br>';
+  return div;
+};
+legend.addTo(map);
+</script>
+</body>
+</html>
