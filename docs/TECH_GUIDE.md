@@ -76,16 +76,17 @@ mezolit2/
 ├── vercel.json                       ← Root Vercel config (delegates to frontend/)
 ├── verify_visual.html                ← Manual visual verification UI
 │
-├── _Docs/                            ← Design documents (source of truth)
-│   ├── mezoliticky_design_plan_v9.md ← Main design (v0.9)
-│   ├── poc_design_v02.md             ← PoC technical spec
-│   ├── visual_fixes_plan_v01.md      ← Milestone 2 visual fix plan
-│   ├── schema_examples_v04.json      ← KB schema (terrain, biotopes, ecotones)
-│   └── vocabulary_v02.json           ← Enum definitions
-│
-├── docs/                             ← THIS DOCUMENTATION
+├── docs/                             ← DOCUMENTATION (source of truth)
+│   ├── README.md                     ← Index of active docs
+│   ├── DESIGN_PLAN.md                ← Main design (v0.9)
 │   ├── SCIENCE_GUIDE.md              ← For scientists & content contributors
-│   └── TECH_GUIDE.md                 ← This file
+│   ├── METHODOLOGY_GUIDE.md          ← Methodology for Yorkshire reconstruction
+│   ├── TECH_GUIDE.md                 ← This file
+│   ├── AUDIT_GAPS_v01.md             ← Audit of data gaps (Yorkshire)
+│   ├── GEO_DESIGN_v02.md             ← Třeboňsko geology layer design
+│   ├── MAP_VALIDATION_TESTS_v02.md   ← Validation test suite
+│   ├── polabi_implementace.md        ← Polabí implementation plan (current focus)
+│   └── archiv/                       ← Superseded historical docs
 │
 ├── data/
 │   ├── raw/
@@ -98,8 +99,8 @@ mezolit2/
 │   └── processed/                    ← Pipeline output (regenerated, safe to delete)
 │
 ├── kb_data/                          ← Knowledge Base reference data
-│   ├── schema_examples_v04.json      ← Copy of _Docs version (used by pipeline)
-│   └── vocabulary_v02.json
+│   ├── schema_examples_v04.json      ← KB schema (terrain, biotopes, ecotones, sites)
+│   └── vocabulary_v02.json           ← Enum definitions
 │
 ├── pipeline/
 │   ├── 00_schema.sql                 ← PostGIS DDL (run once in Supabase)

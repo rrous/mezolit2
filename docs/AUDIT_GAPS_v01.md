@@ -224,7 +224,7 @@ Snapshot KB: **~6200 BCE**
 
 Rozdíl: ~2000-3000 let. V tomto období se les měnil (více lísky, méně břízy), Lake Flixton se zmenšoval, klima se oteplovalo.
 
-**Toto je vědomé designové rozhodnutí** (viz design_plan_v9, SITE_INSTANCE schéma: `snapshot_6200_bce_status: "post-occupation"`). Star Carr slouží jako epistemická kotva — nejlépe dokumentovaná mezolitická lokalita v Británii. Extrapolace na 6200 BCE je SPECULATION, ale přijatá jako základ PoC, protože:
+**Toto je vědomé designové rozhodnutí** (viz [DESIGN_PLAN.md](DESIGN_PLAN.md), SITE_INSTANCE schéma: `snapshot_6200_bce_status: "post-occupation"`). Star Carr slouží jako epistemická kotva — nejlépe dokumentovaná mezolitická lokalita v Británii. Extrapolace na 6200 BCE je SPECULATION, ale přijatá jako základ PoC, protože:
 - Terrain (geologie) se za 2000 let nemění
 - Biotopy se měnily graduálně, ne skokově
 - Alternativa (žádná kotva) by znamenala čistou spekulaci bez referenčního bodu
@@ -235,7 +235,7 @@ Epistemický systém to zachycuje korektně — `revision_note` dokumentuje temp
 
 ## 7. Survival framework — nedotažený cíl
 
-### 8-vrstvý model z design_plan_v9
+### 8-vrstvý model z DESIGN_PLAN.md
 
 ```
 1. Terén + Klima          ← IMPLEMENTOVÁNO (M1)
@@ -504,6 +504,74 @@ Pro každý biotop × sezónu:
 | ec_006 | 1.5 | 1.15 | **-0.35** |
 
 SCIENCE_GUIDE systematicky uvádí NIŽŠÍ hodnoty než zdrojový JSON. Sonnet pravděpodobně "korigoval" hodnoty bez dokumentace.
+
+---
+
+## 12. Geometrická revize Yorkshire + Třeboňsko (2026-04-19)
+
+**Kontext:** Před startem Polabí pipeline provedena strukturální analýza GeoJSON výstupů. Uživatel vizuálně označil mapy za „nereálné, plné děr, potoky vykrajují jezera". Analýza potvrdila a kvantifikovala problém.
+
+### 12.1 Yorkshire — katastrofický stav
+
+| Ukazatel | Yorkshire | Komentář |
+|---|---|---|
+| terrain_features: polygon parts | 636 | — |
+| terrain+biotopes: polygon parts | **2 673** | mnoho multipolygon s drobky |
+| **Počet děr (interior rings)** | **1 586** | 2,4 díry/feature |
+| Díry < 0,01 ha (artefakty) | 24 | — |
+| Díry 0,01–0,5 ha (malé) | 92 | — |
+| Díry 0,5–5 ha (glades, OK) | 392 | — |
+| **Díry ≥ 5 ha (problém)** | **1 078** | **většina** |
+| Díry ≥ 100 ha (kritické) | desítky | — |
+| **Max velikost díry** | **185,46 km²** (18 546 ha) | jedna gigantická díra v lese |
+| **Celková plocha děr** | **1 919 km²** (~8 %) | — |
+| **Díry ve vodních biotopech** | **1 050** | — |
+| **Z toho s řekou uvnitř** | **61 děr / 791 km řek** | = „potoky vykrajují jezera" |
+
+**Top biotopy podle počtu děr (Yorkshire):**
+- Mokřad/slatiniště boreální: 1 047 děr / 68 876 ha
+- Říční lužní les: 378 děr / 52 646 ha
+- Boreální les (bříza-líska): 54 děr / **68 592 ha** (jedna mega-díra)
+
+### 12.2 Třeboňsko — lepší, ale nedokončené
+
+| Ukazatel | Třeboňsko |
+|---|---|
+| Polygon parts | 4 587 |
+| Počet děr | **177** |
+| Díry ≥ 5 ha | 39 |
+| Díry ≥ 100 ha | 1 |
+| Max velikost | 155 ha |
+| Díry ve vodě s řekou | 1 (57 m řeky) |
+| Celková plocha děr | 8,5 km² (~1 %) |
+
+### 12.3 Proč to validační testy nezachytily
+
+- **T-PHY-08** (řeka vs. vodní plocha): v0.2 explicitně skipoval DEM-rekonstruované řeky s komentářem *„they are intentionally in paleolakes"*. To maskovalo **61 případů** v Yorkshire. Bug opraven v v0.3.
+- **Test na díry neexistoval** — pipeline nikdy nepočítala počet/velikost interior rings.
+- **Test na řeku protékající dírou v jezeře neexistoval.**
+- **Yorkshire neměl runner** — `run_validation_tests_cz.py` byl pouze CZ-specifický.
+
+### 12.4 Co přidáno do MAP_VALIDATION_TESTS v0.3
+
+- **T-GEOM-01**: Díry v biotopech (práh 5 % plochy, 300 děr/1 000 km², max velikost)
+- **T-GEOM-02**: Řeky vyřezávající vodu (0-tolerance)
+- **T-GEOM-03**: Konektivita biotopů (izolované < 1 ha patches)
+- **T-PHY-08 upraven**: testuje VŠECHNY zdroje řek, ne jen DIBAVOD
+- **T-SUPP-01 dodokumentován** (již byl v runneru)
+
+### 12.5 Co přidáno do polabi_implementace.md
+
+- **§5.3 Prevence děr a překryvů** — 5 pravidel: full coverage, river-union-not-cut, ST_SnapToGrid, overlap check, glade reclassification
+- **§9.3 Geometrické quality gates** — pipeline nesmí importovat do Supabase, pokud GEOM/PHY testy neprojdou
+- **§9.4 Referenční metriky** — cíl pro Polabí: < 1 % plochy v dírách, 0 řek vyřezávajících vodu, max díra < 1 km²
+
+### 12.6 Zbytek pro Polabí — akční položky
+
+1. Zobecnit `run_validation_tests_cz.py` → `run_validation_tests.py --region {york|cz|polabi}`
+2. Implementovat T-GEOM-01/02/03 ve Python runneru (shapely interior_rings + intersects)
+3. Přidat geometric gate do pipeline `06_import_supabase.py` (odmítnout import při FAIL)
+4. Retroaktivně projít Yorkshire + Třeboňsko a spočítat GEOM skóre → baseline pro srovnání
 
 ---
 

@@ -345,9 +345,9 @@ API je parametrická knowledge base, nikoliv simulační engine. Klient dostáv�
 
 | Soubor | Obsah | Verze |
 |---|---|---|
-| `mezoliticky_design_plan_v9.md` | Tento dokument | 0.9 |
-| `schema_examples_v04.json` | Ukázkové záznamy terrain, biotopy, ekotony | 0.4 |
-| `vocabulary_v02.json` | Definice všech enumerací s layer anotacemi | 0.2 |
+| `docs/DESIGN_PLAN.md` | Tento dokument | 0.9 |
+| `kb_data/schema_examples_v04.json` | Ukázkové záznamy terrain, biotopy, ekotony, sites | 0.4 |
+| `kb_data/vocabulary_v02.json` | Definice všech enumerací s layer anotacemi | 0.2 |
 
 ---
 

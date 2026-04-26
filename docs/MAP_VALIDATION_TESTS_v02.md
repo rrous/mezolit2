@@ -1,8 +1,9 @@
 # Mezolit2 — Validační testy krajinného modelu
 ## MAP_VALIDATION_TESTS_v02.md
 
-*Verze 0.2 | 2026-03-26*
-*Status: NÁVRH — před implementací pipeline*
+*Verze 0.3 | 2026-04-19*
+*Status: NÁVRH — před implementací Polabí pipeline*
+*Změny v0.3: kategorie GEOM pro geometrickou integritu (T-GEOM-01–03), dodokumentování T-PHY-08/09 a T-SUPP-01 (již v runneru), revize T-PHY-08 (kontrola DEM řek, ne jen DIBAVOD). Motivace: revize Yorkshire a Třeboňsko 2026-04 odhalila 1 215 děr v YORK biotopech a 61 děr ve vodních biotopech s protékající řekou — žádný test v v0.2 to nezachytil. Viz AUDIT_GAPS_v01.md §12.*
 *Změny v0.2: 6 nových testů, opravy konzistence, ověřené datové zdroje, implementační plán.*
 
 > Tento dokument definuje sadu testů pro ověření věrohodnosti a konzistence
@@ -279,6 +280,182 @@ korekce. Toto je nejsilnější anchor validace — pokud DEM umístí jezero
 na špatnou elevaci, vše downstream je špatně.
 
 **Epistemics:** certainty: INDIRECT | status: VALID
+
+---
+
+### T-PHY-08: Řeka nevede skrz vodní plochu
+**Universality:** GLOBAL | **Type:** SCORING | **Score function:** LINEAR_DECAY
+
+Řeka smí do jezera/rybníka/paleojezera **vtékat** a **vytékat**, ale
+nesmí vodní plochu **křížit** (víc než threshold délky uvnitř polygonu).
+Křížení = potok „vykrajuje" jezero, typická chyba pipeline, která
+generuje DEM-odvozené kanály přes nízké mokřady.
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `crossing_ratio_threshold` | 0.20 | podíl | INFERENCE | Empirická — vtok+vytok typicky <20 % délky |
+| `min_water_area_ha` | 0.1 | ha | INFERENCE | Filtruje drobné tůně (šum) |
+| `check_dem_rivers` | true | bool | DIRECT | **NOVÉ v v0.3**: v0.2 skipoval DEM-odvozené řeky — bug |
+
+**Required data:** říční síť (DIBAVOD + DEM-rekonstruované), polygony vodních biotopů
+
+**Interpretace:** FAIL = potok protéká jezerem místo kolem něj. Indikuje chybu
+v hydrologické rekonstrukci (flow accumulation přes depresi) nebo chybu
+v klasifikaci vodní plochy.
+
+**Poznámka v0.3:** Původní test v v0.2 skipoval DEM-rekonstruované řeky
+(„intentionally in paleolakes"). Revize 2026-04 ukázala, že to **maskovalo
+hlavní problém**: Yorkshire terrain+biotopes obsahuje 61 děr ve vodních
+biotopech s 791 km řek protékajících skrz. Test nyní kontroluje všechny
+zdroje řek; pro DEM-rekonstruované platí stejný práh.
+
+**Epistemics:** certainty: DIRECT | status: VALID
+
+---
+
+### T-PHY-09: Umělé kanály (straight-line detection)
+**Universality:** GLOBAL | **Type:** SCORING | **Score function:** LINEAR_DECAY
+
+Mezolitická říční síť není rovná. Řeky s sinuositou ≈ 1 na délce >500 m
+pravděpodobně představují **umělé kanály** v moderních datech (odvodňovací
+strouhy, regulace) — musí být odfiltrovány před importem do mezolitické
+rekonstrukce.
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `min_length_m` | 500 | m | INFERENCE | Pod touto délkou je test nespolehlivý |
+| `sinuosity_threshold` | 1.05 | podíl | INFERENCE | Přírodní koryto ≥ 1.1; umělý kanál ≈ 1.0 |
+
+**Required data:** říční síť (liniová)
+
+**Interpretace:** FAIL = segment je podezřele rovný na velkou délku.
+V Čechách typicky odvodňovací kanály (Třeboňsko stoky, Polabí Polabská
+soustava). V Yorkshire regulované úseky Ouse/Hull.
+
+**Epistemics:** certainty: INDIRECT | status: VALID
+
+---
+
+## 3b. Testy — kategorie GEOM (Geometrická integrita)
+
+*NOVÉ v v0.3 — testy struktury polygonů a topologie datasetu.
+Motivace: revize Yorkshire/Třeboňsko 2026-04 ukázala, že testy v kategorii
+PHY nestačí — mapa může projít fyzikálními testy a přitom být plná děr.*
+
+---
+
+### T-GEOM-01: Díry v polygonech biotopů
+**Universality:** GLOBAL | **Type:** SCORING | **Score function:** LINEAR_DECAY
+
+Polygony biotopů (terrain_features_with_biotopes) by měly pokrývat území
+bez systematických děr. Díry (interior rings) o velikosti > 0,5 ha jsou
+povoleny jen jako **glades** (lesní palouky) podle strategie Smart Holes
+z polabi_implementace.md §5. Díry o velikosti > 5 ha v lesním/mokřadním
+biotopu indikují chybu rasterizace, neúplnou klasifikaci nebo překryv
+polygonů.
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `artifact_max_ha` | 0.01 | ha | DIRECT | Pod 100 m² — rasterizační artefakt |
+| `glade_min_ha` | 0.5 | ha | INFERENCE | Pod 0.5 ha = neopodstatněný výřez |
+| `glade_max_ha` | 5.0 | ha | INFERENCE | Nad 5 ha = jiný biotop, ne glade |
+| `max_holes_per_1000km2` | 300 | počet | INFERENCE | Kalibrace: Třeboňsko ~930 km² / 192 děr = 206/1000 km² (akceptovatelné) |
+| `max_hole_area_pct` | 1.0 | % bbox | INFERENCE | Yorkshire má ~6 % = FAIL |
+
+**Required data:** terrain_features_with_biotopes (GeoJSON/PostGIS)
+
+**Interpretace:**
+- FAIL = >5 % plochy v dírách (Yorkshire 2026-04 = 6 %, 1 451 km²)
+- FAIL = >10 děr ≥ 100 ha (Yorkshire měl „huge" díry do 185 km²)
+- WARN = počet děr / 1000 km² > threshold
+- PASS = maxHole < 5 ha, hole count pod thresholdem
+
+**Kalibrace:** Yorkshire při revizi 2026-04 měl **1 215 děr / ~25 000 km²
+= 49/1000 km²** — to vypadá OK podle hustoty, ale **911 z nich bylo ≥ 5 ha**.
+Proto test kontroluje nejen počet, ale distribuci velikostí.
+
+**Epistemics:** certainty: DIRECT | status: VALID
+
+---
+
+### T-GEOM-02: Řeky vyřezávající vodní biotopy (díry-s-řekou)
+**Universality:** GLOBAL | **Type:** BINARY | **Score function:** BINARY
+
+Silnější verze T-PHY-08 zaměřená na **díry ve vodních polygonech**, kterými
+protéká řeka. Kombinace „mokřad s dírou, v díře řeka" = 100% pravděpodobně
+artefakt pipeline (říční buffer vyřízne polygon). V realitě řeka vtéká,
+protéká a vytéká — nevytváří dutinu.
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `water_biotope_keywords` | ["mokř", "rybn", "jezero", "rašelin", "lake", "marsh", "carr", "mire"] | — | DIRECT | Slovník biotopes z vocabulary |
+| `max_allowed_per_region` | 0 | počet | DIRECT | V mezolitické realitě nevzniká |
+
+**Required data:** terrain_features_with_biotopes, rivers
+
+**Interpretace:** FAIL = nalezena ≥ 1 díra ve vodním biotopu, kterou
+prochází river line. **Yorkshire 2026-04: 61 takových děr s 791 km řek.**
+
+**Oprava:** pipeline musí po generování biotopů buď
+(a) sjednotit river buffer s vodním biotopem (jedno polygon), nebo
+(b) nevyřezávat river buffer z vodních biotopů.
+
+**Epistemics:** certainty: DIRECT | status: VALID
+
+---
+
+### T-GEOM-03: Konektivita biotopů (dead pockets)
+**Universality:** GLOBAL | **Type:** SCORING | **Score function:** LINEAR_DECAY
+
+Biotopové polygony by měly tvořit kontinuální plochy. Izolované kapsy
+< 1 ha obklopené jiným biotopem typicky indikují rasterizační šum nebo
+chybu v klasifikačních pravidlech (pixel-level rozhodnutí, které má být
+spojené do sousedního clusteru).
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `min_patch_area_ha` | 1.0 | ha | INFERENCE | Pod touto plochou izolovaný biotop nepředstavuje reálný ekologický útvar na škále 25 m |
+| `max_isolated_fraction` | 0.05 | podíl | INFERENCE | Max 5 % všech polygonů smí být pod threshold |
+
+**Required data:** terrain_features_with_biotopes
+
+**Interpretace:** FAIL = > 5 % polygonů pod 1 ha. Doporučení: merge do
+největšího souseda s kompatibilním biotopem.
+
+**Epistemics:** certainty: INFERENCE | status: HYPOTHESIS
+
+---
+
+### T-SUPP-01: Pokrytí a integrita datasetu
+**Universality:** GLOBAL | **Type:** SCORING | **Score function:** LINEAR_DECAY
+
+Pokrytí bbox musí být ≥ 95 %. Chybějící plocha (gaps mezi polygony, ne
+díry uvnitř) indikuje neúplnou rasterizaci nebo chybějící klasifikační
+pravidla. Doplňkově test hlásí distribuci terrain subtypů.
+
+**Parametry:**
+
+| Parametr | Hodnota | Jednotka | Certainty | Zdroj |
+|----------|---------|----------|-----------|-------|
+| `min_coverage_pct` | 95.0 | % | INFERENCE | Tolerance pro okrajové dlaždice |
+| `min_subtype_diversity` | 5 | počet | INFERENCE | Mesolitická krajina má min. 5 hlavních subtypů |
+
+**Required data:** terrain_features (bez biotopů), bbox regionu
+
+**Interpretace:** WARN = pokrytí 90-95 %. FAIL = pokrytí < 90 % nebo méně
+než 5 různých subtypů.
+
+**Epistemics:** certainty: DIRECT | status: VALID
 
 ---
 
@@ -908,6 +1085,12 @@ bias v DEM, který se propaguje do VŠECH dalších testů. Prioritní diagnosti
 | T-PHY-05 | Biotopová hranice vs. terén | PHY | GLOBAL | BINARY | BINARY | HYPOTHESIS | — | 1 |
 | **T-PHY-06** | **Sklon vs. mokřad** | PHY | GLOBAL | BINARY | BINARY | VALID | — | **1** |
 | **T-PHY-07** | **Paleojezero elevace** | PHY | TEMP_EU | SCORING | LIN_DECAY | VALID | — | **1** |
+| **T-PHY-08** | **Řeka nevede skrz vodu** | PHY | GLOBAL | SCORING | LIN_DECAY | VALID | — | **1** |
+| **T-PHY-09** | **Umělé kanály** | PHY | GLOBAL | SCORING | LIN_DECAY | VALID | — | **1** |
+| **T-GEOM-01** | **Díry v polygonech biotopů** | GEOM | GLOBAL | SCORING | LIN_DECAY | VALID | — | **1** |
+| **T-GEOM-02** | **Řeky vyřezávající vodu** | GEOM | GLOBAL | BINARY | BINARY | VALID | — | **1** |
+| **T-GEOM-03** | **Konektivita biotopů** | GEOM | GLOBAL | SCORING | LIN_DECAY | HYPOTHESIS | — | **1** |
+| **T-SUPP-01** | **Pokrytí a integrita datasetu** | SUPP | GLOBAL | SCORING | LIN_DECAY | VALID | — | **1** |
 | T-ECO-01 | Dostupnost vody | ECO | TEMP_EU* | SCORING | LIN_DECAY | VALID | — | 2 |
 | T-ECO-02 | Ekotonová poloha | ECO | TEMP_EU | SCORING | LIN_DECAY | VALID | — | 2 |
 | T-ECO-03 | Habitat jelena | ECO | TEMP_EU | SCORING | LIN_DECAY | HYPOTHESIS | — | 2 |
@@ -935,9 +1118,10 @@ bias v DEM, který se propaguje do VŠECH dalších testů. Prioritní diagnosti
 | T-GEO-04 | Kvartér v pánvích | GEO | TEMP_EU | SCORING | LIN_DECAY | VALID | — | 1 |
 | **T-GEO-05** | **DEM kontrolní body** | GEO | GLOBAL | SCORING | LIN_DECAY | VALID | — | **1** |
 
-\* Změny v0.2 označeny tučně. TEMP_EU = TEMPERATE_EUROPE, MESO_EU = MESOLITHIC_EUROPE.
+\* Změny v v0.2/v0.3 označeny tučně. TEMP_EU = TEMPERATE_EUROPE, MESO_EU = MESOLITHIC_EUROPE.
 
-**Celkem:** 33 testů | 11 BINARY | 22 SCORING | 15 VALID | 18 HYPOTHESIS
+**Celkem:** 41 testů | 13 BINARY | 28 SCORING | 22 VALID | 19 HYPOTHESIS
+**Nové v v0.3:** T-PHY-08, T-PHY-09, T-GEOM-01, T-GEOM-02, T-GEOM-03, T-SUPP-01 (poslední 3 nově)
 **Nové v v0.2:** T-PHY-06, T-PHY-07, T-ECO-11, T-ECO-12, T-ARCH-09, T-GEO-05
 
 ---
@@ -1121,7 +1305,36 @@ Závislosti řešeny topologickým řazením (DAG).
 
 ---
 
-## 12. Changelog v0.1 → v0.2
+## 12. Changelog v0.2 → v0.3
+
+### Nové testy (6)
+- **T-PHY-08:** Řeka nevede skrz vodní plochu — již v runneru, teď formálně dokumentováno; v0.2 bug: skipoval DEM-rekonstruované řeky
+- **T-PHY-09:** Umělé kanály (straight-line detection) — již v runneru
+- **T-GEOM-01:** Díry v polygonech biotopů — **nová kategorie GEOM**
+- **T-GEOM-02:** Řeky vyřezávající vodní biotopy — ostrá verze T-PHY-08
+- **T-GEOM-03:** Konektivita biotopů (dead pockets)
+- **T-SUPP-01:** Pokrytí a integrita datasetu — již v runneru
+
+### Motivace
+Revize Yorkshire a Třeboňsko 2026-04 zjistila:
+- Yorkshire: 1 215 děr v terrain, 1 586 v terrain+biotopes, **911 děr ≥ 5 ha**, max 185 km² — 1 451 km² (~6 % území) v dírách
+- Yorkshire: **61 děr ve vodních biotopech s 791 km řek uvnitř** — potoky „vykrajují" jezera
+- Třeboňsko: 192 děr, max 502 ha, 6 kritických > 100 ha
+- **V v0.2 žádný test toto nezachytil**. T-PHY-08 měl bug (skipoval DEM řeky). Runner měl 3 testy (T-PHY-08/09, T-SUPP-01) nepopsané v dokumentu.
+
+### Opravy
+- T-PHY-08: `check_dem_rivers` nyní `true` (byl bug v v0.2 — „DEM-reconstructed rivers skipped")
+- Přehledová tabulka: +6 řádků, celkem 41 testů (bylo 33)
+- Nová kategorie GEOM — odděluje geometrickou integritu od fyzikálních zákonů
+
+### Viz
+- AUDIT_GAPS_v01.md §12 „Geometrická revize Yorkshire + Třeboňsko (2026-04)"
+- polabi_implementace.md §5.4 „Prevence děr a překryvů"
+- polabi_implementace.md §9 „Validace" — výčet povinných GEOM testů
+
+---
+
+## 13. Changelog v0.1 → v0.2
 
 ### Nové testy (6)
 - T-PHY-06: Sklon vs. mokřadní biotopy — doplňuje T-PHY-02 o test sklonu

@@ -49,7 +49,7 @@ Nejde o přesnou odpověď. Jde o **model**, který:
 - Přesnou mapu 6200 BCE (rekonstrukce → ne kartografie)
 - Hru (zábava → ne věda)
 
-### Výzkumná otázka (z design_plan_v9)
+### Výzkumná otázka (z [DESIGN_PLAN.md](DESIGN_PLAN.md))
 
 > Jaké byly klíčové faktory — ekologické, technologické a sociální — které určovaly přežití a prosperitu člověka v mezolitické severní Evropě (~9500–6000 BCE)?
 
@@ -63,7 +63,7 @@ Nejde o přesnou odpověď. Jde o **model**, který:
 
 ## 2. Model přežití — 8 vrstev závislostí
 
-Přežití skupiny je výsledek kaskády závislostí (design_plan_v9, sekce 5):
+Přežití skupiny je výsledek kaskády závislostí ([DESIGN_PLAN.md](DESIGN_PLAN.md), sekce 5):
 
 ```
 Vrstva 1: TERÉN + KLIMA                         ← IMPLEMENTOVÁNO
