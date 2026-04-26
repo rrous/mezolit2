@@ -3,30 +3,55 @@ export const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // ── Region detection ─────────────────────────────────────────────────────────
-// CZ mode: uses same Supabase DB as Yorkshire — bbox-based queries return CZ data
-export const REGION = 'cz'
+// Supports `?region=polabi` / `?region=cz` URL params; defaults to 'cz'.
+// All three regions (yorkshire / cz / polabi) live in the same Supabase DB —
+// bboxes don't overlap, so RPC bbox queries naturally return only the region.
+function detectRegion() {
+  if (typeof window === 'undefined') return 'cz'
+  const url = new URL(window.location.href)
+  const r = url.searchParams.get('region')
+  if (r === 'polabi' || r === 'cz' || r === 'yorkshire') return r
+  return 'cz'
+}
+export const REGION = detectRegion()
 export const STATIC_MODE = !SUPABASE_URL  // fallback to static if no Supabase configured
 
-// ── Map defaults ───────────────────────────────────────────────────────────────
-export const MAP_CENTER = [49.08, 14.73]  // Třeboňsko (Švarcenberk)
-export const MAP_ZOOM   = 11
-export const RIVERS_MIN_ZOOM   = 10
-export const ECOTONES_MIN_ZOOM = 10
+// ── Per-region map defaults ──────────────────────────────────────────────────
+const REGION_MAP = {
+  cz:        { center: [49.08, 14.73], zoom: 11 },  // Třeboňsko (Švarcenberk)
+  polabi:    { center: [50.13, 15.10], zoom: 10 },  // Polabí (Nymburk / Poděbrady)
+  yorkshire: { center: [54.21, -0.40], zoom: 10 },  // Star Carr
+}
+const _rmap = REGION_MAP[REGION] || REGION_MAP.cz
+export const MAP_CENTER = _rmap.center
+export const MAP_ZOOM   = _rmap.zoom
+export const RIVERS_MIN_ZOOM   = 9
+export const ECOTONES_MIN_ZOOM = 9
 
 // ── Biotope fill colours ───────────────────────────────────────────────────────
 export const BIOTOPE_COLOR = {
+  // Polabí biotopes (~6200 BCE — Boreal/Atlantic transition, Polabí lowlands)
+  bt_pl_001: '#4A90D9',  // aktivní_koryto (modrá)
+  bt_pl_002: '#6FA8DC',  // mokřad (světle modro-šedá)
+  bt_pl_003: '#52B788',  // lužní_les (zelená vlhká)
+  bt_pl_004: '#A3BE8C',  // záplavová_zóna (světle zelená)
+  bt_pl_005: '#E9C46A',  // xerotermní_step (žlutá)
+  bt_pl_006: '#8B6914',  // suťový_les (hnědá)
+  bt_pl_007: '#2D6A4F',  // pahorkatina_les (tmavě zelená)
+  bt_pl_008: '#7FB069',  // nížinný_smíšený (středně zelená — DOMINANT)
+  bt_pl_glade: '#F4A261', // lesní palouk (oranžová)
   // CZ biotopes (Třeboňsko ~7000 BCE)
-  bt_cz_001: '#5B8C5A',  // Bor na krystaliku (pine-birch on bedrock)
-  bt_cz_002: '#2D6A4F',  // Smíšený les na pískovci (pine-oak)
-  bt_cz_003: '#7FB069',  // Vlhký les na jílovci (wet alder)
-  bt_cz_004: '#A3BE8C',  // Mokřadní olšina (alder carr)
-  bt_cz_005: '#8B6914',  // Habrový les na terase (hornbeam-oak)
-  bt_cz_006: '#52B788',  // Lužní les (floodplain elm-ash)
-  bt_cz_007: '#D4A373',  // Borový bor na píscích (pine on sand)
-  bt_cz_008: '#8B5E3C',  // Rašelinný bor (peat bog)
-  bt_cz_009: '#4A90D9',  // Otevřené jezero (paleolake)
-  bt_cz_010: '#38A169',  // Říční lužní les (riparian)
-  bt_cz_011: '#95D5B2',  // Lesní palouk (forest glade)
+  bt_cz_001: '#5B8C5A',  // Bor na krystaliku
+  bt_cz_002: '#2D6A4F',  // Smíšený les na pískovci
+  bt_cz_003: '#7FB069',  // Vlhký les na jílovci
+  bt_cz_004: '#A3BE8C',  // Mokřadní olšina
+  bt_cz_005: '#8B6914',  // Habrový les na terase
+  bt_cz_006: '#52B788',  // Lužní les
+  bt_cz_007: '#D4A373',  // Borový bor na píscích
+  bt_cz_008: '#8B5E3C',  // Rašelinný bor
+  bt_cz_009: '#4A90D9',  // Otevřené jezero
+  bt_cz_010: '#38A169',  // Říční lužní les
+  bt_cz_011: '#95D5B2',  // Lesní palouk
   // Yorkshire biotopes (kept for compatibility)
   bt_001: '#4A90D9', bt_002: '#7FB069', bt_003: '#2D6A4F',
   bt_004: '#E9C46A', bt_005: '#F4A261', bt_006: '#D4A373',
@@ -73,6 +98,15 @@ export const SITE_ROLE = {
 
 // ── Terrain subtype fill colours (for terrain-subtype color mode) ─────────────
 export const TERRAIN_SUBTYPE_COLOR = {
+  // Polabí
+  tst_pl_001: '#4A90D9',  // aktivní_koryto
+  tst_pl_002: '#6FA8DC',  // mokřad
+  tst_pl_003: '#52B788',  // lužní_les
+  tst_pl_004: '#A3BE8C',  // záplavová_zóna
+  tst_pl_005: '#E9C46A',  // xerotermní_step
+  tst_pl_006: '#8B6914',  // suťový_les
+  tst_pl_007: '#2D6A4F',  // pahorkatina_les
+  tst_pl_008: '#7FB069',  // nížinný_smíšený
   // CZ terrain subtypes
   tst_cz_001: '#8B7D6B',  // Crystalline basement
   tst_cz_002: '#C4A35A',  // Cretaceous sandstone
@@ -92,6 +126,16 @@ export const TERRAIN_SUBTYPE_COLOR = {
 }
 
 export const TERRAIN_SUBTYPE_LABEL = {
+  // Polabí
+  tst_pl_001: 'Aktivní koryto',
+  tst_pl_002: 'Mokřad',
+  tst_pl_003: 'Lužní les',
+  tst_pl_004: 'Záplavová zóna',
+  tst_pl_005: 'Xerotermní step',
+  tst_pl_006: 'Suťový les',
+  tst_pl_007: 'Pahorkatinný les',
+  tst_pl_008: 'Nížinný smíšený les',
+  // CZ
   tst_cz_001: 'Krystalické podloží',
   tst_cz_002: 'Pískovcová plošina',
   tst_cz_003: 'Jílovcová deprese',

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Mezolit2 — Polabí preview (~6200 BCE)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; height: 100vh; background: #111827; overflow: hidden; }
+    #sidebar {
+      width: 280px; background: #1f2937; color: #d1d5db;
+      display: flex; flex-direction: column; overflow-y: auto;
+      box-shadow: 3px 0 12px rgba(0,0,0,0.6);
+    }
+    #map { flex: 1; }
+    .hdr {
+      padding: 12px 14px; border-bottom: 1px solid #374151; background: #111827;
+    }
+    .hdr h1 { font-size: 15px; color: #60a5fa; font-weight: 700; }
+    .hdr small { font-size: 11px; color: #6b7280; }
+    .sect { border-bottom: 1px solid #374151; padding: 10px 14px; }
+    .sect h2 {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: #93c5fd; font-weight: 600; margin-bottom: 8px;
+    }
+    .layer-row {
+      display: flex; align-items: center; gap: 8px; padding: 4px 0;
+      cursor: pointer; user-select: none;
+    }
+    .layer-row:hover { color: #fff; }
+    .swatch {
+      width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 2px; flex-shrink: 0;
+    }
+    .layer-row label { flex: 1; font-size: 12px; cursor: pointer; }
+    .layer-row .count { font-size: 10px; color: #6b7280; }
+    .legend-row {
+      display: flex; align-items: center; gap: 8px; padding: 3px 0;
+      font-size: 11.5px;
+    }
+    .legend-row .lk { color: #d1d5db; flex: 1; }
+    .legend-row .ln { color: #6b7280; font-size: 10px; }
+    .status {
+      padding: 8px 14px; font-size: 11px; color: #9ca3af;
+      background: #0f172a; border-top: 1px solid #374151;
+    }
+    #hover { padding: 6px 14px; font-size: 12px; color: #60a5fa; min-height: 22px; background: #0f172a; }
+    .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <div class="hdr">
+      <h1>Polabí — preview</h1>
+      <small>~6200 BCE • EPSG:4326 • bbox 14.45-15.75°E, 49.7-50.3°N</small>
+    </div>
+    <div id="hover">&nbsp;</div>
+
+    <div class="sect">
+      <h2>Vrstvy</h2>
+      <div id="layer-toggles"></div>
+    </div>
+
+    <div class="sect">
+      <h2>Legenda biotopů</h2>
+      <div id="legend"></div>
+    </div>
+
+    <div class="sect">
+      <h2>Quality gate (§9.3)</h2>
+      <div id="metrics" style="font-size: 11px; color: #d1d5db; line-height: 1.6;">
+        <em style="color: #6b7280">načítá se…</em>
+      </div>
+    </div>
+
+    <div class="status" id="status">Inicializace…</div>
+  </div>
+  <div id="map"></div>
+
+<script>
+// Polabí color palette (matches frontend/src/config.js naming for future merge)
+// Color by biotope_id (preferred over terrain_subtype_id since 05 adds bt_pl_glade)
+const BT_COLORS = {
+  bt_pl_001: '#4A90D9',   // aktivní_koryto
+  bt_pl_002: '#6FA8DC',   // mokřad
+  bt_pl_003: '#52B788',   // lužní_les
+  bt_pl_004: '#A3BE8C',   // záplavová_zóna
+  bt_pl_005: '#E9C46A',   // xerotermní_step
+  bt_pl_006: '#8B6914',   // suťový_les
+  bt_pl_007: '#2D6A4F',   // pahorkatina_les
+  bt_pl_008: '#7FB069',   // nížinný_smíšený
+  bt_pl_glade: '#F4A261', // lesní palouk (oranžová — vystupuje z lesa)
+  _default:   '#cccccc'
+};
+const COLORS = {  // backwards-compat for terrain_subtype_id key
+  tst_pl_001: BT_COLORS.bt_pl_001, tst_pl_002: BT_COLORS.bt_pl_002,
+  tst_pl_003: BT_COLORS.bt_pl_003, tst_pl_004: BT_COLORS.bt_pl_004,
+  tst_pl_005: BT_COLORS.bt_pl_005, tst_pl_006: BT_COLORS.bt_pl_006,
+  tst_pl_007: BT_COLORS.bt_pl_007, tst_pl_008: BT_COLORS.bt_pl_008,
+  _default:   '#cccccc'
+};
+const NAMES = {
+  tst_pl_001: 'aktivní_koryto',
+  tst_pl_002: 'mokřad',
+  tst_pl_003: 'lužní_les',
+  tst_pl_004: 'záplavová_zóna',
+  tst_pl_005: 'xerotermní_step',
+  tst_pl_006: 'suťový_les',
+  tst_pl_007: 'pahorkatina_les',
+  tst_pl_008: 'nížinný_smíšený',
+};
+
+const map = L.map('map', { preferCanvas: true }).setView([50.0, 15.1], 9);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap, © CARTO',
+  subdomains: 'abcd', maxZoom: 19,
+}).addTo(map);
+
+// Bbox rectangle outline
+L.rectangle([[49.70, 14.45], [50.30, 15.75]], {
+  color: '#60a5fa', weight: 2, fill: false, dashArray: '6 4'
+}).addTo(map);
+
+const groups = {
+  terrain:  L.layerGroup().addTo(map),
+  glades:   L.layerGroup().addTo(map),
+  ecotones: L.layerGroup().addTo(map),
+  rivers:   L.layerGroup().addTo(map),
+  pollen:   L.layerGroup().addTo(map),
+  sites:    L.layerGroup().addTo(map),
+};
+
+// Color by ecotone id
+const EC_COLORS = {
+  ec_pl_001: '#06b6d4',  // lužní/mokřad - tyrkys
+  ec_pl_002: '#10b981',  // nížinný/lužní - zelený
+  ec_pl_003: '#84cc16',  // nížinný/záplavová
+  ec_pl_004: '#a3e635',  // nížinný/pahorkatina
+  ec_pl_005: '#facc15',  // nížinný/step
+  ec_pl_006: '#f97316',  // nížinný/palouk
+  ec_pl_007: '#a855f7',  // pahorkatina/suť
+  ec_pl_008: '#22d3ee',  // koryto/mokřad
+  ec_pl_generic: '#94a3b8',  // šedá
+};
+
+const status = (msg) => { document.getElementById('status').textContent = msg; };
+const hover  = (msg) => { document.getElementById('hover').innerHTML = msg || '&nbsp;'; };
+
+async function loadJSON(path) {
+  const r = await fetch(path + '?_=' + Date.now());
+  if (!r.ok) throw new Error(`${r.status} ${path}`);
+  return await r.json();
+}
+
+async function loadTerrain() {
+  // Prefer 05 output (with glades + ecotone-ready biotope IDs); fallback to 04
+  let fc = null, source = '';
+  try {
+    fc = await loadJSON('data/processed/polabi/terrain_features_with_biotopes_polabi.geojson');
+    source = '05_kb_rules';
+  } catch (_) {
+    fc = await loadJSON('data/processed/polabi/terrain_features_polabi.geojson');
+    source = '04_terrain';
+  }
+
+  // Split out glades into separate group for visual emphasis
+  const isGlade = (f) => f.properties.biotope_id === 'bt_pl_glade';
+  const gladeFC = { type: 'FeatureCollection', features: fc.features.filter(isGlade) };
+  const terrainFC = { type: 'FeatureCollection', features: fc.features.filter(f => !isGlade(f)) };
+
+  const tlayer = L.geoJSON(terrainFC, {
+    style: (f) => {
+      const bt = f.properties.biotope_id;
+      return {
+        color: '#1f2937', weight: 0.4,
+        fillColor: BT_COLORS[bt] || BT_COLORS._default,
+        fillOpacity: 0.62,
+      };
+    },
+    onEachFeature: (f, l) => {
+      const p = f.properties;
+      const html = `<b>${p.id}</b><br>${p.terrain_subtype_id} (${NAMES[p.terrain_subtype_id]||'?'})<br>biotope: ${p.biotope_id||'-'}`;
+      l.on('mouseover', () => hover(html));
+      l.on('mouseout', () => hover(''));
+      l.bindPopup(html);
+    }
+  });
+  groups.terrain.addLayer(tlayer);
+
+  if (gladeFC.features.length > 0) {
+    const glayer = L.geoJSON(gladeFC, {
+      style: () => ({
+        color: '#7c2d12', weight: 1.5,
+        fillColor: BT_COLORS.bt_pl_glade, fillOpacity: 0.85,
+      }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const html = `<b>${p.id}</b><br>Lesní palouk (glade)<br>plocha: ${p.area_ha} ha<br>${p.notes||''}`;
+        l.on('mouseover', () => hover(html));
+        l.on('mouseout', () => hover(''));
+        l.bindPopup(html);
+      }
+    });
+    groups.glades.addLayer(glayer);
+  }
+
+  return {
+    terrain: terrainFC.features.length,
+    glades: gladeFC.features.length,
+    source: source,
+  };
+}
+
+async function loadEcotones() {
+  try {
+    const fc = await loadJSON('data/processed/polabi/ecotones_polabi.geojson');
+    const layer = L.geoJSON(fc, {
+      style: (f) => {
+        const id = f.properties.id;
+        return {
+          color: EC_COLORS[id] || '#94a3b8',
+          weight: 2.5, opacity: 0.85,
+          dashArray: id === 'ec_pl_generic' ? '4 4' : null,
+        };
+      },
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const html = `<b>${p.id}</b>: ${p.name}<br>${p.biotope_a_id} ↔ ${p.biotope_b_id}<br>edge × ${p.edge_effect_factor}<br><i>${p.human_relevance||''}</i>`;
+        l.on('mouseover', () => hover(html));
+        l.on('mouseout', () => hover(''));
+        l.bindPopup(html);
+      }
+    });
+    groups.ecotones.addLayer(layer);
+    return fc.features.length;
+  } catch (e) {
+    console.error('ecotones', e); return 0;
+  }
+}
+
+async function loadRivers() {
+  try {
+    const fc = await loadJSON('data/processed/polabi/rivers_polabi.geojson');
+    const layer = L.geoJSON(fc, {
+      style: (f) => {
+        const s = f.properties.strahler || 1;
+        return {
+          color: '#4A90D9', weight: Math.max(1, Math.min(s, 7)),
+          opacity: 0.9,
+        };
+      },
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const html = `<b>${p.id}</b><br>${p.name || '(bez názvu)'}<br>Strahler: ${p.strahler}`;
+        l.on('mouseover', () => hover(html));
+        l.on('mouseout', () => hover(''));
+        l.bindPopup(html);
+      }
+    });
+    groups.rivers.addLayer(layer);
+    return fc.features.length;
+  } catch (e) {
+    console.error('rivers', e); return 0;
+  }
+}
+
+async function loadSites() {
+  try {
+    const fc = await loadJSON('data/processed/polabi/sites_polabi.geojson');
+    const layer = L.geoJSON(fc, {
+      pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+        radius: 7, color: '#1e293b', weight: 2,
+        fillColor: '#ef4444', fillOpacity: 0.9,
+      }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const html = `<b>${p.name}</b> (${p.id})<br>${p.period} • ${p.site_type}<br><i>${p.notes||''}</i><br><small>src: ${p.source}</small>`;
+        l.on('mouseover', () => hover(html));
+        l.on('mouseout', () => hover(''));
+        l.bindPopup(html);
+      }
+    });
+    groups.sites.addLayer(layer);
+    return fc.features.length;
+  } catch (e) {
+    console.error('sites', e); return 0;
+  }
+}
+
+async function loadPollen() {
+  try {
+    const fc = await loadJSON('data/processed/polabi/pollen_sites_polabi.geojson');
+    const layer = L.geoJSON(fc, {
+      pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+        radius: 8, color: '#fbbf24', weight: 2, fillColor: '#fbbf24', fillOpacity: 0.85
+      }),
+      onEachFeature: (f, l) => {
+        const p = f.properties;
+        const taxa = (p.dominant_taxa||[]).join(', ');
+        const html = `<b>${p.name}</b> (${p.id})<br>${p.age_min_cal_bce}–${p.age_max_cal_bce} cal BCE<br>AP: ${p.tree_pollen_pct}%<br>${taxa}`;
+        l.on('mouseover', () => hover(html));
+        l.on('mouseout', () => hover(''));
+        l.bindPopup(html);
+      }
+    });
+    groups.pollen.addLayer(layer);
+    return fc.features.length;
+  } catch (e) {
+    console.error('pollen', e); return 0;
+  }
+}
+
+async function loadMetrics() {
+  try {
+    const m = await loadJSON('data/processed/polabi/validation_metrics_polabi.json');
+    const passed = m.passed;
+    const mt = m.metrics || {};
+    const lines = [];
+    lines.push(`<b style="color:${passed?'#34d399':'#ef4444'}">${passed?'✔ PASSED':'✘ FAILED'}</b>`);
+    lines.push(`Polygony: ${mt.polygon_count?.toLocaleString?.()||'-'}`);
+    lines.push(`Plocha: ${mt.total_polygon_area_km2||'-'} km²`);
+    lines.push(`Coverage bbox: ${mt.coverage_pct||'-'}%`);
+    lines.push(`Díry: ${mt.holes_total||0} (${mt.pct_area_in_holes||0}% plochy)`);
+    lines.push(`Max díra: ${mt.max_hole_ha||0} ha`);
+    lines.push(`Díry ≥ 100 ha: ${mt.holes_ge_100_ha||0}`);
+    lines.push(`Díry/1000 km²: ${mt.holes_per_1000_km2||0}`);
+    lines.push(`Polygony &lt; 1 ha: ${mt.pct_polygons_under_1_ha||0}%`);
+    if (m.failures && m.failures.length) {
+      lines.push('<b style="color:#ef4444">Chyby:</b>');
+      m.failures.forEach(f => lines.push(`• ${f}`));
+    }
+    document.getElementById('metrics').innerHTML = lines.join('<br>');
+  } catch (e) {
+    document.getElementById('metrics').innerHTML = `<em style="color:#6b7280">žádné metriky (${e.message})</em>`;
+  }
+}
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  Object.entries(NAMES).forEach(([sid, name]) => {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `<div class="swatch" style="background:${COLORS[sid]}"></div>
+                     <span class="lk">${name}</span>
+                     <span class="ln">${sid}</span>`;
+    el.appendChild(row);
+  });
+  // Glade as separate legend entry
+  const grow = document.createElement('div');
+  grow.className = 'legend-row';
+  grow.innerHTML = `<div class="swatch" style="background:${BT_COLORS.bt_pl_glade}"></div>
+                    <span class="lk">lesní palouk</span>
+                    <span class="ln">bt_pl_glade</span>`;
+  el.appendChild(grow);
+}
+
+function buildLayerToggles(counts) {
+  const el = document.getElementById('layer-toggles');
+  const items = [
+    { id: 'terrain',  label: 'Biotopy (polygony)',  color: '#7FB069', count: counts.terrain },
+    { id: 'glades',   label: 'Lesní palouky',       color: '#F4A261', count: counts.glades },
+    { id: 'ecotones', label: 'Ekotony (linie)',     color: '#06b6d4', count: counts.ecotones },
+    { id: 'rivers',   label: 'Řeky (Strahler ≥ 3)', color: '#4A90D9', count: counts.rivers },
+    { id: 'sites',    label: 'Mezolitické lokality', color: '#ef4444', count: counts.sites },
+    { id: 'pollen',   label: 'Pylové profily',      color: '#fbbf24', count: counts.pollen },
+  ];
+  items.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'layer-row';
+    row.innerHTML = `<input type="checkbox" id="t-${it.id}" checked>
+                     <div class="swatch" style="background:${it.color}"></div>
+                     <label for="t-${it.id}">${it.label}</label>
+                     <span class="count">${it.count}</span>`;
+    row.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) groups[it.id].addTo(map);
+      else map.removeLayer(groups[it.id]);
+    });
+    el.appendChild(row);
+  });
+}
+
+(async () => {
+  status('Načítání GeoJSON…');
+  buildLegend();
+  const [tInfo, e, r, s, p] = await Promise.all([
+    loadTerrain(), loadEcotones(), loadRivers(), loadSites(), loadPollen()
+  ]);
+  buildLayerToggles({
+    terrain: tInfo.terrain, glades: tInfo.glades,
+    ecotones: e, rivers: r, sites: s, pollen: p,
+  });
+  await loadMetrics();
+  status(`Hotovo: ${tInfo.terrain} polygonů + ${tInfo.glades} paloukov, ${e} ekotonů, ${r} řek, ${s} archeo. lokalit, ${p} pyl. bodů (${tInfo.source})`);
+})();
+</script>
+</body>
+</html>

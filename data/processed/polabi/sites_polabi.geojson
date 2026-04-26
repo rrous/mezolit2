@@ -1,0 +1,294 @@
+{
+  "type": "FeatureCollection",
+  "name": "sites_polabi",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.111,
+          50.067
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_001",
+        "name": "Velim",
+        "region": "polabi",
+        "period": "epipaleolit/mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl, S. 2006: Mezolit jižních Čech (přesah do středočeské oblasti); Sklenář 1992",
+        "notes": "Multi-perioda lokalita Velim-Skalka; mezolitická složka v ranně-holocenních terasách"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.989,
+          50.135
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_002",
+        "name": "Sadská",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl 2006; Lečbych 2018",
+        "notes": "Povrchové sběry kamenných artefaktů z Polabské nížiny v okolí Sadské"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.019,
+          50.118
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_003",
+        "name": "Hradišťko u Sadské",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl 2006",
+        "notes": "Sběry mikrolitů na štěrkové terase Labe"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.687,
+          50.18
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_004",
+        "name": "Toušeň",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Sklenář 1992; Vencl 2006",
+        "notes": "Niva Labe; mezolitické artefakty z písčin terasy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.665,
+          50.183
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_005",
+        "name": "Brandýs nad Labem",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Sklenář 1992",
+        "notes": "Mezolitická vrstva v nivě Labe; písčité terasy"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.567,
+          50.226
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_006",
+        "name": "Konětopy",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "sídliště",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl 2006; Lečbych 2018",
+        "notes": "Mezolitické sídliště na písčitém ostrohu nad nivou Labe"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.833,
+          50.205
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_007",
+        "name": "Lysá nad Labem (Hrabanov vicinity)",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Pokorný et al. 2012; Vencl 2006",
+        "notes": "Mezolitické nálezy v okolí Hrabanovského pylového profilu (boreal/atlantic)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.045,
+          50.183
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_008",
+        "name": "Nymburk-Drahelice",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl 2006; AMCR digiarchiv",
+        "notes": "Sběry mikrolitů z písčité terasy Labe u Nymburka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.346,
+          49.991
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_009",
+        "name": "Záboří nad Labem",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Sklenář 1992; Vencl 2006",
+        "notes": "Mezolitická vrstva v nivě Labe východně od Kolína"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.587,
+          50.219
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_010",
+        "name": "Kostelec nad Labem",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Sklenář 1992",
+        "notes": "Mezolitické nálezy v nivě Labe u Kostelce"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.113,
+          50.141
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_011",
+        "name": "Poděbrady-Polabec",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Vencl 2006",
+        "notes": "Mezolitické sběry na terase Labe u Poděbrad (oblast Polabec)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.86,
+          50.075
+        ]
+      },
+      "properties": {
+        "id": "as_pl_lit_012",
+        "name": "Český Brod (okolí)",
+        "region": "polabi",
+        "period": "mezolit",
+        "site_type": "rozptyl_štípaná",
+        "elevation_m": null,
+        "distance_to_water_m": null,
+        "ident_cely": null,
+        "katastr": null,
+        "certainty": "INFERENCE",
+        "source": "Sklenář 1992",
+        "notes": "Mezolitické nálezy v jižním okraji Polabské nížiny u Českého Brodu"
+      }
+    }
+  ]
+}

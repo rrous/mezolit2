@@ -7,7 +7,11 @@ data/raw/dem/
 data/raw/rivers/
 data/raw/gebco/
 data/raw/cz/
+data/raw/polabi/
 yorkshire_dem.tif
+
+# ── Processed rastery (re-generable z preprocessing) ─────────
+data/processed/polabi/dem/
 
 # ── Local tooling ─────────────────────────────────────────────
 .claude/
