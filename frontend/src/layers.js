@@ -4,18 +4,19 @@ import {
   CERTAINTY_OPACITY, CERTAINTY_DASH,
   ecotoneColor, SITE_ROLE, RIVERS_MIN_ZOOM, ECOTONES_MIN_ZOOM
 } from './config.js'
-import { fetchTerrain, fetchRivers, fetchEcotones, fetchCoastline, fetchSites } from './api.js'
+import { fetchTerrain, fetchRivers, fetchEcotones, fetchCoastline, fetchSites, fetchPollenSites } from './api.js'
 import { openPanel } from './panel.js'
 import { updateLegend } from './map.js'
 
 // ── Layer groups ──────────────────────────────────────────────────────────────
 
 export const layerGroups = {
-  coastline: L.layerGroup(),
-  terrain:   L.layerGroup(),
-  ecotones:  L.layerGroup(),
-  rivers:    L.layerGroup(),
-  sites:     L.layerGroup()
+  coastline:    L.layerGroup(),
+  terrain:      L.layerGroup(),
+  ecotones:     L.layerGroup(),
+  rivers:       L.layerGroup(),
+  sites:        L.layerGroup(),
+  pollenSites:  L.layerGroup()
 }
 
 // Current season (null = all)
@@ -56,18 +57,20 @@ function clearHoverInfo() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 export async function initLayers(map) {
-  // Z-order: coastline → terrain → rivers → sites → ecotones (on top of everything)
+  // Z-order: coastline → terrain → rivers → ecotones → sites → pollenSites (top)
   layerGroups.coastline.addTo(map)
   layerGroups.terrain.addTo(map)
   layerGroups.rivers.addTo(map)
-  layerGroups.sites.addTo(map)
   layerGroups.ecotones.addTo(map)
+  layerGroups.sites.addTo(map)
+  layerGroups.pollenSites.addTo(map)
 
   setLoading(true)
   try {
     await Promise.all([
       loadCoastline(),
-      loadSites()
+      loadSites(),
+      loadPollenSites()
     ])
     await refreshDynamic(map)
   } finally {
@@ -249,6 +252,38 @@ async function loadSites() {
 
   const visibleRoles = [...new Set(fc.features.map(f => f.properties.lakescape_role).filter(Boolean))]
   updateLegend({ siteRoles: visibleRoles })
+}
+
+async function loadPollenSites() {
+  const fc = await fetchPollenSites()
+  layerGroups.pollenSites.clearLayers()
+  if (!fc?.features?.length) return
+
+  L.geoJSON(fc, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+      radius: 9, weight: 2.5,
+      color: '#7c2d12',                // dark amber border
+      fillColor: '#fbbf24',             // bright yellow fill
+      fillOpacity: 0.92,
+      className: 'pollen-marker'
+    }),
+    onEachFeature: (feature, layer) => {
+      const p = feature.properties
+      const taxa = Array.isArray(p.dominant_taxa) ? p.dominant_taxa.join(', ') : ''
+      layer.bindTooltip(
+        `<strong>🌳 ${p.name}</strong><br>` +
+        `Pylový profil · ${p.tree_pollen_pct ?? '?'} % AP<br>` +
+        `${p.age_min_cal_bce}–${p.age_max_cal_bce} cal BCE`,
+        { sticky: false, direction: 'top', offset: [0, -12] }
+      )
+      layer.on('click', (e) => {
+        L.DomEvent.stopPropagation(e)
+        openPanel({ type: 'pollen', props: p })
+      })
+    }
+  }).addTo(layerGroups.pollenSites)
+
+  updateLegend({ hasPollen: fc.features.length > 0 })
 }
 
 // ── Season update ─────────────────────────────────────────────────────────────

@@ -74,3 +74,11 @@ export function fetchSites() {
   if (STATIC_MODE) return loadStatic('sites_cz.geojson')
   return rpc('get_sites', {}, { cache: true })
 }
+
+export function fetchPollenSites() {
+  // Pollen sites are sparse (1 in Polabí, 0 elsewhere) — load all once, no bbox
+  if (STATIC_MODE) {
+    return Promise.resolve({ type: 'FeatureCollection', features: [] })
+  }
+  return rpc('get_pollen_sites', {}, { cache: true })
+}

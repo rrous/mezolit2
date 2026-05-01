@@ -646,3 +646,53 @@ html, body, #app {
 
   .map-legend { display: none; }
 }
+
+/* ── Pollen reference site styling ─────────────────────────────────────────── */
+.pollen-marker {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  cursor: pointer;
+}
+.pollen-marker:hover {
+  filter: drop-shadow(0 0 6px #fbbf24);
+}
+
+.legend-pollen {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fbbf24;
+  border: 2px solid #7c2d12;
+  flex-shrink: 0;
+}
+
+.pollen-icon-inline {
+  display: inline-block;
+  font-size: 1.1rem;
+  margin-right: 0.4rem;
+}
+
+/* Pylové taxa jako "pills" */
+.taxa-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.taxa-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 0.78rem;
+  font-style: italic;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 10px;
+  color: #d4af37;
+}
+
+.panel-note {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0.3rem 0 0 0;
+  line-height: 1.4;
+}

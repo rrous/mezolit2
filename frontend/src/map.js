@@ -12,6 +12,7 @@ let _visBiotopes       = null   // Set<string> | null (null = show all)
 let _visSiteRoles      = null   // Set<string> | null
 let _visTerrainSubtypes = null  // Set<string> | null
 let _colorMode         = 'biotope'  // 'biotope' | 'subtype'
+let _hasPollen         = false
 
 // ── Basemap state ─────────────────────────────────────────────────────────────
 let _currentBasemap = null
@@ -91,11 +92,12 @@ export function setBasemap(name) {
 //   []  (empty)    → show none (layer hidden)
 //   ['bt_001',...] → show only those
 // colorMode: 'biotope' | 'subtype' — which legend section to render for terrain
-export function updateLegend({ biotopes, siteRoles, terrainSubtypes, colorMode } = {}) {
+export function updateLegend({ biotopes, siteRoles, terrainSubtypes, colorMode, hasPollen } = {}) {
   if (colorMode !== undefined)       _colorMode          = colorMode
   if (biotopes !== undefined)        _visBiotopes        = biotopes        !== null ? new Set(biotopes)        : null
   if (siteRoles !== undefined)       _visSiteRoles       = siteRoles       !== null ? new Set(siteRoles)       : null
   if (terrainSubtypes !== undefined) _visTerrainSubtypes = terrainSubtypes !== null ? new Set(terrainSubtypes) : null
+  if (hasPollen !== undefined)       _hasPollen          = hasPollen
   if (_legendEl) _renderLegend()
 }
 
@@ -143,6 +145,13 @@ function _renderLegend() {
     <div class="legend-divider"></div>
     <div class="legend-title">Sites</div>
     ${siteLegendRows(siteRoles)}` : ''}
+    ${_hasPollen ? `
+    <div class="legend-divider"></div>
+    <div class="legend-title">Pylové profily</div>
+    <div class="legend-row">
+      <span class="legend-pollen"></span>
+      <span>Pylový profil</span>
+    </div>` : ''}
   `
 }
 

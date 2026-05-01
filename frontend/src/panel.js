@@ -18,6 +18,7 @@ export function openPanel({ type, props }) {
   if (type === 'terrain')  html = renderTerrain(props)
   if (type === 'ecotone')  html = renderEcotone(props)
   if (type === 'site')     html = renderSite(props)
+  if (type === 'pollen')   html = renderPollen(props)
 
   panelBody().innerHTML = html
   panel().hidden = false
@@ -136,6 +137,46 @@ function renderSite(p) {
     <section class="panel-section panel-meta">
       <h4>Epistemics</h4>
       <div class="panel-row">${certBadge(p.certainty)}</div>
+      ${p.source ? `<div class="panel-row source-text">${p.source}</div>` : ''}
+      <div class="panel-row panel-id">${p.id}</div>
+    </section>
+  `
+}
+
+// ── Pollen reference site ─────────────────────────────────────────────────────
+
+function renderPollen(p) {
+  const taxa = Array.isArray(p.dominant_taxa) && p.dominant_taxa.length
+    ? p.dominant_taxa.map(t => `<span class="taxa-pill">${t}</span>`).join(' ')
+    : '—'
+  const ageStr = (p.age_min_cal_bce != null && p.age_max_cal_bce != null)
+    ? `${p.age_min_cal_bce}–${p.age_max_cal_bce} cal BCE`
+    : '—'
+  const apPct = p.tree_pollen_pct != null ? `${p.tree_pollen_pct} %` : '—'
+  return `
+    <section class="panel-section">
+      <h4>Pylový profil</h4>
+      <div class="panel-row">
+        <span class="pollen-icon-inline">🌳</span>
+        <strong>${p.name ?? p.id}</strong>
+      </div>
+      ${p.notes ? `<p class="panel-note">${p.notes}</p>` : ''}
+    </section>
+
+    <section class="panel-section">
+      <h4>Datace</h4>
+      <div class="panel-row">Stáří: <strong>${ageStr}</strong></div>
+      ${p.elevation_m != null ? `<div class="panel-row">Elevace: <strong>${p.elevation_m} m n.m.</strong></div>` : ''}
+    </section>
+
+    <section class="panel-section">
+      <h4>Pylové spektrum</h4>
+      <div class="panel-row">AP (stromové pyly): <strong>${apPct}</strong></div>
+      <div class="panel-row taxa-row">${taxa}</div>
+    </section>
+
+    <section class="panel-section panel-meta">
+      <h4>Epistemics</h4>
       ${p.source ? `<div class="panel-row source-text">${p.source}</div>` : ''}
       <div class="panel-row panel-id">${p.id}</div>
     </section>
